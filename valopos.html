@@ -16,7 +16,7 @@
     <meta name="twitter:title" content="ValoPOS - نظام كاشير الصيدلية" />
     <meta name="twitter:description" content="نظام كاشير متكامل لإدارة الصيدليات" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=20260613">
     <style>
       .whatsapp-float{position:fixed;bottom:90px;right:24px;width:56px;height:56px;border-radius:50%;background:#25d366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.7rem;text-decoration:none;box-shadow:0 6px 24px rgba(37,211,102,0.4);z-index:998;transition:all .3s ease;animation:whatsappPulse 2s ease-in-out infinite}
       .whatsapp-float:hover{transform:scale(1.12);color:#fff;box-shadow:0 8px 32px rgba(37,211,102,0.55)}
@@ -37,7 +37,10 @@
             <div class="sidebar-header">
                 <div class="logo">
                     <span class="logo-icon">+</span>
-                    <h2>ValoPOS</h2>
+                    <div class="logo-text">
+                        <h2>ValoPOS</h2>
+                        <span class="logo-version">v1.0 — نظام إدارة الصيدليات</span>
+                    </div>
                 </div>
                 <button class="close-sidebar" id="closeSidebar">&times;</button>
             </div>
@@ -76,6 +79,9 @@
                     <span class="badge-dot"></span>
                     <span>اشتراك نشط</span>
                 </div>
+                <button class="theme-toggle-btn" id="valoposThemeToggle" aria-label="Toggle theme">
+                    <i class="fas fa-moon"></i>
+                </button>
             </div>
         </aside>
 
@@ -89,12 +95,24 @@
                 </div>
                 <div class="header-info">
                     <span class="date-display" id="dateDisplay"></span>
+                    <button class="header-theme-toggle" id="headerThemeToggle" aria-label="Toggle theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
                     <div class="user-avatar" id="headerAvatar">أ</div>
                 </div>
             </header>
 
             <!-- ===== صفحة لوحة التحكم ===== -->
             <section class="page active" id="page-dashboard">
+                <div class="welcome-banner">
+                    <div class="welcome-text">
+                        <h2>مرحباً بك في ValoPOS 🏪</h2>
+                        <p>نظام متكامل لإدارة الصيدليات — فواتير، مخزون، عملاء، تقارير</p>
+                    </div>
+                    <div class="welcome-version">
+                        <i class="fas fa-shield-alt"></i> v1.0 — ثابت وآمن
+                    </div>
+                </div>
                 <div class="page-header">
                     <h1>لوحة التحكم</h1>
                     <p>نظرة عامة على نشاط الصيدلية</p>

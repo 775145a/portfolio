@@ -1082,6 +1082,111 @@ window.addEventListener('click', function(e) {
 
 document.getElementById('exportBtn').addEventListener('click', exportData);
 
+// ===== Ripple Effect on buttons =====
+(function() {
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn');
+        if (!btn) return;
+        var ripple = document.createElement('span');
+        var rect = btn.getBoundingClientRect();
+        var size = Math.max(rect.width, rect.height);
+        var x = e.clientX - rect.left - size / 2;
+        var y = e.clientY - rect.top - size / 2;
+        ripple.style.cssText = 'position:absolute;left:' + x + 'px;top:' + y + 'px;width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:rgba(255,255,255,0.3);transform:scale(0);animation:ripple 0.6s ease-out;pointer-events:none;';
+        btn.style.position = 'relative';
+        btn.style.overflow = 'hidden';
+        btn.appendChild(ripple);
+        setTimeout(function() { ripple.remove(); }, 700);
+    });
+})();
+
+// ===== Cart count pop animation =====
+function animateCartCount() {
+    var el = document.getElementById('cartCount');
+    if (!el) return;
+    el.classList.remove('pop');
+    void el.offsetWidth;
+    el.classList.add('pop');
+}
+
+// ===== Override addToCart with animation =====
+var origAddToCart = addToCart;
+addToCart = function(med) {
+    origAddToCart(med);
+    var grid = document.getElementById('medsGrid');
+    var items = grid.querySelectorAll('.med-item');
+    items.forEach(function(el) {
+        var nameEl = el.querySelector('.med-name');
+        if (nameEl && nameEl.textContent.trim() === med.name) {
+            el.classList.remove('added-animation');
+            void el.offsetWidth;
+            el.classList.add('added-animation');
+        }
+    });
+    animateCartCount();
+};
+
+// ===== Animate stat values with staggered entrance =====
+(function animateStats() {
+    var cards = document.querySelectorAll('.stat-card');
+    cards.forEach(function(card, i) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(function() {
+            card.style.transition = 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 80 + i * 60);
+    });
+})();
+
+// ===== Animate cards with staggered entrance =====
+(function() {
+    var cards = document.querySelectorAll('.card');
+    cards.forEach(function(card, i) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(16px)';
+        setTimeout(function() {
+            card.style.transition = 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 300 + i * 80);
+    });
+})();
+
+// ===== Dark Mode Toggle =====
+(function() {
+    var toggleIds = ['valoposThemeToggle', 'headerThemeToggle'];
+    var toggles = toggleIds.map(function(id) { return document.getElementById(id); });
+    var icons = toggles.map(function(t) { return t ? t.querySelector('i') : null; });
+    var saved = localStorage.getItem('valopos_theme');
+    if (saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'valopos-dark');
+        icons.forEach(function(ic) { if (ic) ic.className = 'fas fa-sun'; });
+    }
+    function applyTheme(isDark) {
+        var html = document.documentElement;
+        if (isDark) {
+            html.setAttribute('data-theme', 'valopos-dark');
+            icons.forEach(function(ic) { if (ic) ic.className = 'fas fa-sun'; });
+            localStorage.setItem('valopos_theme', 'dark');
+        } else {
+            html.removeAttribute('data-theme');
+            icons.forEach(function(ic) { if (ic) ic.className = 'fas fa-moon'; });
+            localStorage.setItem('valopos_theme', 'light');
+        }
+    }
+    toggles.forEach(function(toggle) {
+        if (toggle) {
+            toggle.addEventListener('click', function() {
+                var html = document.documentElement;
+                var isDark = html.getAttribute('data-theme') === 'valopos-dark';
+                applyTheme(!isDark);
+            });
+        }
+    });
+})();
+
 loadData();
 loadCategories();
 loadSettings();
