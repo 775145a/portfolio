@@ -1,2 +1,19 @@
 # Local Netlify folder
 .netlify
+
+# Node modules
+server/node_modules/
+data/
+*.db
+
+# Runtime artifacts
+server_err*.txt
+server_out*.txt
+sv_err.log
+sv_out.log
+zzz_*.txt
+s_err.txt
+s_out.txt
+*.log
+login.json
+start_server.bat

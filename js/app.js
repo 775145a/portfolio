@@ -13,7 +13,6 @@ function sanitize(str) {
 var appData = {
     cart: [],
     invoices: [],
-    subscriptions: [],
     customers: [],
     settings: {
         pharmacyName: 'ValoPOS',
@@ -136,7 +135,6 @@ navItems.forEach(function(item) {
         if (pageId === 'reports') renderReports();
         if (pageId === 'dashboard') renderDashboard();
         if (pageId === 'pos') { renderMedsGrid(); loadCustomerSelect(); }
-        if (pageId === 'subscriptions') renderSubsHistory();
         if (pageId === 'customers') renderCustomers();
         if (window.innerWidth < 768) {
             document.getElementById('sidebar').classList.remove('open');
@@ -170,8 +168,6 @@ document.getElementById('globalSearch').addEventListener('input', function() {
         renderMedsGrid(q);
     }
 });
-
-var selectedPlan = null;
 
 function renderMedsGrid(query) {
     var grid = document.getElementById('medsGrid');
@@ -247,11 +243,31 @@ function doSearch() {
 
 var debouncedSearch = debounce(function() { doSearch(); }, 300);
 
-document.getElementById('posSearch').addEventListener('input', debouncedSearch);
+document.getElementById('posSearch').addEventListener('input', function() {
+    var val = this.value.trim();
+    if (val && /^\d+$/.test(val)) {
+        doSearch();
+    } else {
+        debouncedSearch();
+    }
+});
 
 document.getElementById('posSearch').addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         document.getElementById('searchSuggestions').classList.remove('active');
+    }
+    if (e.key === 'Enter') {
+        var q = this.value.trim();
+        if (/^\d+$/.test(q)) {
+            var bm = medicinesDB.find(function(m) { return m.barcode && m.barcode === q; });
+            if (bm && bm.qty > 0) {
+                addToCart(bm);
+                showToast('\u062A\u0645\u062A \u0625\u0636\u0627\u0641\u0629 ' + bm.name + ' \u0639\u0646 \u0637\u0631\u064A\u0642 \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F', 'success');
+                this.value = '';
+                document.getElementById('searchSuggestions').classList.remove('active');
+                renderMedsGrid();
+            }
+        }
     }
 });
 
@@ -470,9 +486,15 @@ function showReceipt(invoice) {
     }
     var med = invoice.items.length > 0 ? medicinesDB.find(function(m) { return m.name === invoice.items[0].name; }) : null;
     var barcode = med && med.barcode ? barcodeHTML(med.barcode) : '';
-    content.innerHTML = '\n        <div class="receipt">\n            <h3>' + (appData.settings.pharmacyName || 'ValoPOS') + '</h3>\n            <p>' + (appData.settings.address || '') + '</p>\n            <p>' + (appData.settings.phone || '') + '</p>\n            ' + barcode + '\n            <div class="receipt-line"></div>\n            <p>\u0641\u0627\u062A\u0648\u0631\u0629 #' + invoice.id + '</p>\n            <p>' + formatDate(invoice.date) + '</p>\n            ' + (customerName ? '<p class="receipt-customer">\u0627\u0644\u0639\u0645\u064A\u0644: ' + customerName + '</p>' : '') + '\n            <div class="receipt-line"></div>\n            ' + itemsHtml + '\n            <div class="receipt-line"></div>\n            <div class="receipt-row"><span>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</span><span>' + formatPrice(invoice.subtotal) + ' \u062C.\u0645</span></div>\n            <div class="receipt-row"><span>\u0627\u0644\u062E\u0635\u0645</span><span>' + formatPrice(invoice.discount) + ' \u062C.\u0645</span></div>\n            <div class="receipt-row receipt-total"><span>\u0627\u0644\u0635\u0627\u0641\u064A</span><span>' + formatPrice(invoice.net) + ' \u062C.\u0645</span></div>\n            <div class="receipt-row"><span>\u0627\u0644\u0645\u062F\u0641\u0648\u0639</span><span>' + formatPrice(invoice.paid) + ' \u062C.\u0645</span></div>\n            <div class="receipt-row"><span>\u0627\u0644\u0628\u0627\u0642\u064A</span><span>' + formatPrice(invoice.change) + ' \u062C.\u0645</span></div>\n            <div class="receipt-line"></div>\n            <p>\u0634\u0643\u0631\u0627\u064B \u0644\u062A\u0639\u0627\u0645\u0644\u0643\u0645 \u0645\u0639\u0646\u0627</p>\n        </div>\n    ';
+    var footer = appData.settings.receiptFooter || '\u0634\u0643\u0631\u0627\u064B \u0644\u062A\u0639\u0627\u0645\u0644\u0643\u0645 \u0645\u0639\u0646\u0627';
+    content.innerHTML = '\n        <div class="receipt">\n            <h3>' + (appData.settings.pharmacyName || 'ValoPOS') + '</h3>\n            <p>' + (appData.settings.address || '') + '</p>\n            <p>' + (appData.settings.phone || '') + '</p>\n            ' + barcode + '\n            <div class="receipt-line"></div>\n            <p>\u0641\u0627\u062A\u0648\u0631\u0629 #' + invoice.id + '</p>\n            <p>' + formatDate(invoice.date) + '</p>\n            ' + (customerName ? '<p class="receipt-customer">\u0627\u0644\u0639\u0645\u064A\u0644: ' + customerName + '</p>' : '') + '\n            <div class="receipt-line"></div>\n            ' + itemsHtml + '\n            <div class="receipt-line"></div>\n            <div class="receipt-row"><span>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</span><span>' + formatPrice(invoice.subtotal) + ' \u062C.\u0645</span></div>\n            <div class="receipt-row"><span>\u0627\u0644\u062E\u0635\u0645</span><span>' + formatPrice(invoice.discount) + ' \u062C.\u0645</span></div>\n            <div class="receipt-row receipt-total"><span>\u0627\u0644\u0635\u0627\u0641\u064A</span><span>' + formatPrice(invoice.net) + ' \u062C.\u0645</span></div>\n            <div class="receipt-row"><span>\u0627\u0644\u0645\u062F\u0641\u0648\u0639</span><span>' + formatPrice(invoice.paid) + ' \u062C.\u0645</span></div>\n            <div class="receipt-row"><span>\u0627\u0644\u0628\u0627\u0642\u064A</span><span>' + formatPrice(invoice.change) + ' \u062C.\u0645</span></div>\n            <div class="receipt-line"></div>\n            <p>' + footer + '</p>\n        </div>\n    ';
     document.getElementById('receiptModal').style.display = 'block';
 }
+
+window.addEventListener('afterprint', function() {
+    var m = document.getElementById('receiptModal');
+    if (m) m.style.display = 'none';
+});
 
 document.getElementById('printReceiptBtn').addEventListener('click', function() {
     if (appData.cart.length > 0) {
@@ -680,212 +702,6 @@ function deleteCustomer(id) {
     showToast('\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0639\u0645\u064A\u0644', 'info');
 }
 
-var generatedOtp = '';
-var generatedOtpRef = '';
-var TARGET_PHONE = '01003677165';
-
-function selectPlan(type, amount) {
-    selectedPlan = { type: type, amount: amount };
-    document.getElementById('subTypeDisplay').textContent = type === '\u0634\u0647\u0631\u064A' ? '\u0627\u0634\u062A\u0631\u0627\u0643 \u0634\u0647\u0631\u064A' : '\u0627\u0634\u062A\u0631\u0627\u0643 \u0633\u0646\u0648\u064A';
-    document.getElementById('subAmountDisplay').textContent = amount + ' \u062C.\u0645';
-    document.getElementById('subStep1').style.display = 'block';
-    document.getElementById('subStep2').style.display = 'none';
-    document.getElementById('subStep3').style.display = 'none';
-    document.getElementById('walletPhone').value = '';
-    document.getElementById('otpError').style.display = 'none';
-    document.getElementById('subModal').style.display = 'block';
-}
-
-document.getElementById('sendOtpBtn').addEventListener('click', function() {
-    var phone = document.getElementById('walletPhone').value.trim();
-    if (!phone || phone.length < 10) {
-        showToast('\u0627\u0644\u0631\u062C\u0627\u0621 \u0625\u062F\u062E\u0627\u0644 \u0631\u0642\u0645 \u0647\u0627\u062A\u0641 \u0635\u062D\u064A\u062D', 'error');
-        return;
-    }
-    showToast('\u062C\u0627\u0631\u064A \u0625\u0631\u0633\u0627\u0644 \u0631\u0645\u0632 \u0627\u0644\u062A\u0623\u0643\u064A\u062F...', 'info');
-    document.getElementById('displayPhone').textContent = phone;
-    fetch('/api/sms/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phone })
-    }).then(function(r) { return r.json(); }).then(function(data) {
-        if (data.success) {
-            generatedOtpRef = data.reference;
-            document.getElementById('subStep1').style.display = 'none';
-            document.getElementById('subStep2').style.display = 'block';
-            document.getElementById('subStep3').style.display = 'none';
-            document.querySelectorAll('.otp-box').forEach(function(inp) { inp.value = ''; });
-            document.getElementById('otpError').style.display = 'none';
-            if (data.devOtp) {
-                showToast('\u0631\u0645\u0632 \u0627\u0644\u062A\u0623\u0643\u064A\u062F: ' + data.devOtp, 'warning');
-            } else {
-                showToast('\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0645\u0632 \u0627\u0644\u062A\u0623\u0643\u064A\u062F \u0625\u0644\u0649 ' + phone, 'success');
-            }
-        } else {
-            showToast('\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0631\u0645\u0632 \u0627\u0644\u062A\u0623\u0643\u064A\u062F: ' + (data.message || '\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641'), 'error');
-        }
-    }).catch(function() {
-        generatedOtp = String(Math.floor(100000 + Math.random() * 900000));
-        document.getElementById('subStep1').style.display = 'none';
-        document.getElementById('subStep2').style.display = 'block';
-        document.getElementById('subStep3').style.display = 'none';
-        document.querySelectorAll('.otp-box').forEach(function(inp) { inp.value = ''; });
-        document.getElementById('otpError').style.display = 'none';
-        showToast('\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0631\u0645\u0632 \u0627\u0644\u062A\u0623\u0643\u064A\u062F \u0639\u0644\u0649 ' + phone + '\n\u0627\u0644\u0631\u0645\u0632: ' + generatedOtp, 'info');
-    });
-});
-
-document.querySelectorAll('.otp-box').forEach(function(inp, idx) {
-    inp.addEventListener('input', function() {
-        if (this.value && idx < 5) {
-            document.querySelector('.otp-box[data-idx="' + (idx + 1) + '"]').focus();
-        }
-    });
-    inp.addEventListener('keydown', function(e) {
-        if (e.key === 'Backspace' && !this.value && idx > 0) {
-            document.querySelector('.otp-box[data-idx="' + (idx - 1) + '"]').focus();
-        }
-    });
-});
-
-document.getElementById('confirmOtpBtn').addEventListener('click', function() {
-    var entered = '';
-    document.querySelectorAll('.otp-box').forEach(function(inp) { entered += inp.value; });
-    if (entered.length < 6) {
-        document.getElementById('otpError').textContent = '\u0627\u0644\u0631\u062C\u0627\u0621 \u0625\u062F\u062E\u0627\u0644 \u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u0645\u0643\u0648\u0646 \u0645\u0646 6 \u0623\u0631\u0642\u0627\u0645';
-        document.getElementById('otpError').style.display = 'block';
-        return;
-    }
-    var phone = document.getElementById('displayPhone').textContent;
-    fetch('/api/sms/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phone, otp: entered, reference: generatedOtpRef })
-    }).then(function(r) { return r.json(); }).then(function(data) {
-        if (data.valid) {
-            document.getElementById('otpError').style.display = 'none';
-            showToast('\u062C\u0627\u0631\u064A \u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u062F\u0641\u0639...', 'info');
-            fetch('/api/payments/wallet-pay', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    phone: phone,
-                    amount: selectedPlan.amount,
-                    description: selectedPlan.type === '\u0634\u0647\u0631\u064A' ? '\u0627\u0634\u062A\u0631\u0627\u0643 \u0634\u0647\u0631\u064A ValoPOS' : '\u0627\u0634\u062A\u0631\u0627\u0643 \u0633\u0646\u0648\u064A ValoPOS',
-                    customerName: appData.settings.pharmacyName
-                })
-            }).then(function(r) { return r.json(); }).then(function(payData) {
-                completeSubscription(phone, payData);
-            }).catch(function() {
-                completeSubscription(phone, { status: 'completed', reference: 'local-' + Date.now() });
-            });
-        } else {
-            document.getElementById('otpError').textContent = '\u0631\u0645\u0632 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u060C \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649';
-            document.getElementById('otpError').style.display = 'block';
-        }
-    }).catch(function() {
-        if (entered !== generatedOtp) {
-            document.getElementById('otpError').textContent = '\u0631\u0645\u0632 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u060C \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649';
-            document.getElementById('otpError').style.display = 'block';
-            return;
-        }
-        document.getElementById('otpError').style.display = 'none';
-        completeSubscription(phone, { status: 'completed', reference: 'local-' + Date.now() });
-    });
-});
-
-function completeSubscription(phone, payData) {
-    var sub = {
-        id: appData.subscriptions.length + 1,
-        type: selectedPlan.type,
-        amount: selectedPlan.amount,
-        walletPhone: phone,
-        transferredTo: TARGET_PHONE,
-        paymentRef: payData.reference || '',
-        startDate: new Date().toISOString(),
-        endDate: selectedPlan.type === '\u0634\u0647\u0631\u064A'
-            ? new Date(Date.now() + 30*24*60*60*1000).toISOString()
-            : new Date(Date.now() + 365*24*60*60*1000).toISOString(),
-        paymentMethod: '\u0645\u062D\u0641\u0638\u0629 \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A\u0629',
-        status: '\u0646\u0634\u0637',
-        date: new Date().toISOString()
-    };
-    appData.subscriptions.push(sub);
-    saveData();
-    renderSubsHistory();
-    renderDashboard();
-    document.getElementById('subStep1').style.display = 'none';
-    document.getElementById('subStep2').style.display = 'none';
-    document.getElementById('subStep3').style.display = 'block';
-    document.getElementById('successType').textContent = selectedPlan.type === '\u0634\u0647\u0631\u064A' ? '\u0627\u0634\u062A\u0631\u0627\u0643 \u0634\u0647\u0631\u064A (500 \u062C.\u0645)' : '\u0627\u0634\u062A\u0631\u0627\u0643 \u0633\u0646\u0648\u064A (5000 \u062C.\u0645)';
-    document.getElementById('successAmount').textContent = selectedPlan.amount + ' \u062C.\u0645';
-    document.getElementById('successPhone').textContent = phone;
-    document.getElementById('successDate').textContent = formatDate(new Date().toISOString());
-    if (payData.status === 'completed') {
-        showToast('\u062A\u0645 \u0627\u0644\u062F\u0641\u0639 \u0628\u0646\u062C\u0627\u062D!', 'success');
-    } else {
-        showToast('\u062A\u0645 \u0627\u0644\u0627\u0634\u062A\u0631\u0627\u0643 \u0648\u0644\u0643\u0646 \u0641\u0634\u0644 \u0627\u0644\u062F\u0641\u0639\u060C \u064A\u0631\u062C\u0649 \u0645\u0631\u0627\u062C\u0639\u0629 \u0627\u0644\u0625\u062F\u0627\u0631\u0629', 'warning');
-    }
-}
-
-document.getElementById('resendOtpBtn').addEventListener('click', function() {
-    var phone = document.getElementById('displayPhone').textContent;
-    document.querySelectorAll('.otp-box').forEach(function(inp) { inp.value = ''; });
-    document.getElementById('otpError').style.display = 'none';
-    fetch('/api/sms/resend-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phone, reference: generatedOtpRef })
-    }).then(function(r) { return r.json(); }).then(function(data) {
-        if (data.success) {
-            generatedOtpRef = data.reference;
-            document.querySelectorAll('.otp-box').forEach(function(inp) { inp.value = ''; });
-            document.getElementById('otpError').style.display = 'none';
-            if (data.devOtp) {
-                showToast('\u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 - \u0631\u0645\u0632 \u0627\u0644\u062A\u0623\u0643\u064A\u062F: ' + data.devOtp, 'warning');
-            } else {
-                showToast('\u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u0625\u0631\u0633\u0627\u0644 \u0631\u0645\u0632 \u0627\u0644\u062A\u0623\u0643\u064A\u062F \u0625\u0644\u0649 ' + phone, 'success');
-            }
-        } else {
-            showToast('\u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0625\u0631\u0633\u0627\u0644', 'error');
-        }
-    }).catch(function() {
-        generatedOtp = String(Math.floor(100000 + Math.random() * 900000));
-        showToast('\u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u0625\u0631\u0633\u0627\u0644 \u0631\u0645\u0632 \u0627\u0644\u062A\u0623\u0643\u064A\u062F \u0625\u0644\u0649 ' + phone + '\n\u0627\u0644\u0631\u0645\u0632: ' + generatedOtp, 'info');
-    });
-});
-
-document.getElementById('closeSuccessBtn').addEventListener('click', function() {
-    document.getElementById('subModal').style.display = 'none';
-});
-
-function renderSubsHistory() {
-    var tbody = document.getElementById('subsHistoryBody');
-    if (appData.subscriptions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center empty-state">\u0644\u0627 \u062A\u0648\u062C\u062F \u0627\u0634\u062A\u0631\u0627\u0643\u0627\u062A</td></tr>';
-        return;
-    }
-    tbody.innerHTML = '';
-    appData.subscriptions.forEach(function(s) {
-        var isActive = new Date(s.endDate) > new Date();
-        var badge = isActive ? 'badge-success' : 'badge-danger';
-        var statusText = isActive ? '\u0646\u0634\u0637' : '\u0645\u0646\u062A\u0647\u064A';
-        var tr = document.createElement('tr');
-        tr.innerHTML = '\n            <td>' + (s.type === '\u0634\u0647\u0631\u064A' ? '\u0634\u0647\u0631\u064A' : '\u0633\u0646\u0648\u064A') + '</td>\n            <td>' + s.amount + ' \u062C.\u0645</td>\n            <td>' + formatDate(s.startDate) + '</td>\n            <td>' + formatDate(s.endDate) + '</td>\n            <td><span class="badge ' + badge + '">' + statusText + '</span></td>\n        ';
-        tbody.appendChild(tr);
-    });
-}
-
-function updateSubBadge() {
-    var badge = document.getElementById('subBadge');
-    var active = appData.subscriptions.some(function(s) { return new Date(s.endDate) > new Date(); });
-    if (active) {
-        badge.innerHTML = '<span class="badge-dot"></span><span>\u0627\u0634\u062A\u0631\u0627\u0643 \u0646\u0634\u0637</span>';
-    } else {
-        badge.innerHTML = '<span class="badge-dot" style="background:var(--danger)"></span><span>\u0644\u0627 \u064A\u0648\u062C\u062F \u0627\u0634\u062A\u0631\u0627\u0643</span>';
-    }
-}
-
 function renderDashboard() {
     var todaySales = appData.invoices
         .filter(function(inv) { return isToday(inv.date); })
@@ -895,7 +711,6 @@ function renderDashboard() {
         .reduce(function(sum, inv) { return sum + inv.net; }, 0);
     var lowStock = medicinesDB.filter(function(m) { return m.qty > 0 && m.qty <= 10; }).length;
     var outOfStock = medicinesDB.filter(function(m) { return m.qty <= 0; }).length;
-    var activeSubs = appData.subscriptions.filter(function(s) { return new Date(s.endDate) > new Date(); }).length;
     var expiringMeds = medicinesDB.filter(function(m) {
         var days = getExpiryDays(m.expiryDate);
         return days !== null && days >= 0 && days <= 30;
@@ -906,7 +721,6 @@ function renderDashboard() {
     document.getElementById('lowStock').textContent = lowStock;
     document.getElementById('outOfStock').textContent = outOfStock;
     document.getElementById('monthlySales').textContent = formatPrice(monthlySales) + ' \u062C.\u0645';
-    document.getElementById('activeSubs').textContent = activeSubs;
     document.getElementById('expiringMedsCount').textContent = expiringMeds;
 
     var tbody = document.getElementById('recentSalesBody');
@@ -961,7 +775,6 @@ function renderDashboard() {
         }
     }
 
-    updateSubBadge();
 }
 
 function renderReports() {
@@ -1016,15 +829,14 @@ function resetData() {
         if (confirm('\u062A\u0623\u0643\u064A\u062F \u0646\u0647\u0627\u0626\u064A\u061F \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639!')) {
             localStorage.removeItem('pharmacy_pos_data');
             appData = {
-                cart: [], invoices: [], subscriptions: [], customers: [],
+                cart: [], invoices: [], customers: [],
                 settings: { pharmacyName: 'ValoPOS', address: '', phone: '' },
                 nextInvoiceId: 1, stockChanges: []
             };
             saveData();
             renderDashboard();
             renderInventory();
-            renderSubsHistory();
-            renderReports();
+    renderReports();
             renderCustomers();
             showToast('\u062A\u0645 \u0645\u0633\u062D \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A', 'info');
         }
@@ -1194,10 +1006,8 @@ renderMedsGrid();
 renderCart();
 renderDashboard();
 renderInventory();
-renderSubsHistory();
 renderReports();
 renderCustomers();
-updateSubBadge();
 loadCustomerSelect();
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function(err) {

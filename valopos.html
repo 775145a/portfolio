@@ -31,7 +31,57 @@
 
     <div id="toastContainer"></div>
 
-    <div class="app-container">
+    <!-- ===== Login Page ===== -->
+    <div class="login-page" id="loginPage">
+        <div class="login-card">
+            <div class="login-header">
+                <span class="login-logo">+</span>
+                <h1>ValoPOS</h1>
+                <p>نظام إدارة الصيدليات</p>
+            </div>
+            <div class="login-tabs">
+                <button class="login-tab active" data-tab="login">تسجيل الدخول</button>
+                <button class="login-tab" data-tab="register">إنشاء حساب</button>
+            </div>
+            <div class="login-form" id="loginForm">
+                <div class="form-group">
+                    <label>اسم المستخدم</label>
+                    <input type="text" class="form-input" id="loginUsername" placeholder="أدخل اسم المستخدم" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <input type="password" class="form-input" id="loginPassword" placeholder="أدخل كلمة المرور" autocomplete="current-password">
+                </div>
+                <div class="login-error" id="loginError"></div>
+                <button class="btn btn-primary btn-block" id="loginBtn">تسجيل الدخول</button>
+            </div>
+            <div class="login-form" id="registerForm" style="display:none;">
+                <div class="form-group">
+                    <label>اسم المستخدم</label>
+                    <input type="text" class="form-input" id="regUsername" placeholder="اسم المستخدم">
+                </div>
+                <div class="form-group">
+                    <label>الاسم الظاهر</label>
+                    <input type="text" class="form-input" id="regDisplayName" placeholder="الاسم الكامل">
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <input type="password" class="form-input" id="regPassword" placeholder="كلمة المرور">
+                </div>
+                <div class="form-group" id="regAdminGroup" style="display:none;">
+                    <label>كلمة مرور المدير (لإنشاء صلاحيات أعلى)</label>
+                    <input type="password" class="form-input" id="regAdminPassword" placeholder="كلمة مرور المدير">
+                </div>
+                <div class="register-error" id="registerError"></div>
+                <button class="btn btn-primary btn-block" id="registerBtn">إنشاء حساب</button>
+            </div>
+            <div class="login-footer">
+                <span id="loginServerStatus">جاري الاتصال بالخادم...</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container" id="appContainer" style="display:none;">
         <!-- ========== الشريط الجانبي ========== -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
@@ -61,10 +111,6 @@
                     <span class="nav-icon">&#x1F465;</span>
                     <span>العملاء</span>
                 </a>
-                <a href="#" class="nav-item" data-page="subscriptions">
-                    <span class="nav-icon">&#x1F4B3;</span>
-                    <span>الاشتراكات</span>
-                </a>
                 <a href="#" class="nav-item" data-page="reports">
                     <span class="nav-icon">&#x1F4CA;</span>
                     <span>التقارير</span>
@@ -75,10 +121,6 @@
                 </a>
             </nav>
             <div class="sidebar-footer">
-                <div class="subscription-badge" id="subBadge">
-                    <span class="badge-dot"></span>
-                    <span>اشتراك نشط</span>
-                </div>
                 <button class="theme-toggle-btn" id="valoposThemeToggle" aria-label="Toggle theme">
                     <i class="fas fa-moon"></i>
                 </button>
@@ -158,13 +200,6 @@
                         <div class="stat-info">
                             <span class="stat-value" id="monthlySales">0</span>
                             <span class="stat-label">مبيعات الشهر</span>
-                        </div>
-                    </div>
-                    <div class="stat-card purple">
-                        <div class="stat-icon">&#x1F4B3;</div>
-                        <div class="stat-info">
-                            <span class="stat-value" id="activeSubs">0</span>
-                            <span class="stat-label">اشتراكات نشطة</span>
                         </div>
                     </div>
                 </div>
@@ -349,58 +384,6 @@
                 </div>
             </section>
 
-            <!-- ===== صفحة الاشتراكات ===== -->
-            <section class="page" id="page-subscriptions">
-                <div class="page-header">
-                    <h1>الاشتراكات</h1>
-                    <button class="btn btn-primary" id="subscribeBtn">+ اشتراك جديد</button>
-                </div>
-                <div class="subs-plans">
-                    <div class="plan-card featured">
-                        <div class="plan-badge">الأكثر شهرة</div>
-                        <div class="plan-header">
-                            <h3>شهري</h3>
-                            <div class="plan-price">500 <small>ج.م</small></div>
-                            <p>شهرياً</p>
-                        </div>
-                        <ul class="plan-features">
-                            <li>&#x2705; نظام كاشير متكامل</li>
-                            <li>&#x2705; إدارة المخزون</li>
-                            <li>&#x2705; تقارير يومية</li>
-                            <li>&#x2705; دعم فني 24/7</li>
-                            <li>&#x2705; تحديثات مستمرة</li>
-                        </ul>
-                        <button class="btn btn-primary btn-block" onclick="selectPlan('\u0634\u0647\u0631\u064A', 500)">اشترك الآن</button>
-                    </div>
-                    <div class="plan-card super">
-                        <div class="plan-badge">أوفر</div>
-                        <div class="plan-header">
-                            <h3>سنوي</h3>
-                            <div class="plan-price">5000 <small>ج.م</small></div>
-                            <p>سنوياً <span class="save-badge">وفر 1000 ج.م</span></p>
-                        </div>
-                        <ul class="plan-features">
-                            <li>&#x2705; جميع مميزات الشهري</li>
-                            <li>&#x2705; شهرين مجاناً</li>
-                            <li>&#x2705; تقارير متقدمة</li>
-                            <li>&#x2705; دعم فني متميز</li>
-                            <li>&#x2705; نسخ احتياطي تلقائي</li>
-                            <li>&#x2705; أولوية التحديثات</li>
-                        </ul>
-                        <button class="btn btn-success btn-block" onclick="selectPlan('\u0633\u0646\u0648\u064A', 5000)">اشترك الآن</button>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header"><h3>سجل الاشتراكات</h3></div>
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead><tr><th>النوع</th><th>المبلغ</th><th>تاريخ البداية</th><th>تاريخ النهاية</th><th>الحالة</th></tr></thead>
-                            <tbody id="subsHistoryBody"><tr><td colspan="5" class="text-center empty-state">لا توجد اشتراكات</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
             <!-- ===== صفحة التقارير ===== -->
             <section class="page" id="page-reports">
                 <div class="page-header">
@@ -537,63 +520,6 @@
         </div>
     </div>
 
-    <!-- مودال الاشتراك -->
-    <div class="modal" id="subModal">
-        <div class="modal-content">
-            <span class="modal-close">&times;</span>
-            <div id="subStep1">
-                <h2>تفعيل الاشتراك</h2>
-                <div class="sub-info-box">
-                    <div class="sub-info-row"><span>نوع الاشتراك:</span><strong id="subTypeDisplay">-</strong></div>
-                    <div class="sub-info-row"><span>المبلغ:</span><strong id="subAmountDisplay" style="color:var(--primary);font-size:20px;">-</strong></div>
-                    <div class="sub-info-row"><span>طريقة الدفع:</span><strong>محفظة إلكترونية</strong></div>
-                </div>
-                <div class="form-group">
-                    <label>رقم هاتف المحفظة الإلكترونية</label>
-                    <input type="tel" id="walletPhone" class="form-input" placeholder="مثال: 01123456789" dir="ltr" style="text-align:left;">
-                    <small style="color:var(--text-muted);font-size:12px;">أدخل رقم الهاتف المرتبط بمحفظتك الإلكترونية</small>
-                </div>
-                <button class="btn btn-primary btn-block" id="sendOtpBtn">إرسال رمز التأكيد</button>
-            </div>
-            <div id="subStep2" style="display:none;">
-                <h2>تأكيد الدفع</h2>
-                <div class="sub-info-box">
-                    <p style="text-align:center;margin-bottom:10px;">تم إرسال رمز التأكيد إلى</p>
-                    <p style="text-align:center;font-size:18px;font-weight:700;direction:ltr;" id="displayPhone">-</p>
-                </div>
-                <div class="form-group">
-                    <label>رمز التأكيد (SMS)</label>
-                    <div class="otp-inputs" id="otpContainer">
-                        <input type="text" class="otp-box" maxlength="1" data-idx="0">
-                        <input type="text" class="otp-box" maxlength="1" data-idx="1">
-                        <input type="text" class="otp-box" maxlength="1" data-idx="2">
-                        <input type="text" class="otp-box" maxlength="1" data-idx="3">
-                        <input type="text" class="otp-box" maxlength="1" data-idx="4">
-                        <input type="text" class="otp-box" maxlength="1" data-idx="5">
-                    </div>
-                    <div id="otpError" style="color:var(--danger);font-size:13px;text-align:center;display:none;">رمز غير صحيح، حاول مرة أخرى</div>
-                </div>
-                <button class="btn btn-success btn-block" id="confirmOtpBtn">تأكيد الدفع</button>
-                <button class="btn btn-secondary btn-block" id="resendOtpBtn" style="margin-top:8px;">إعادة إرسال الرمز</button>
-            </div>
-            <div id="subStep3" style="display:none;">
-                <div style="text-align:center;padding:20px 0;">
-                    <div style="font-size:60px;margin-bottom:15px;">&#x2705;</div>
-                    <h2 style="color:var(--success);">تم الدفع بنجاح!</h2>
-                    <div class="sub-info-box" style="text-align:right;">
-                        <div class="sub-info-row"><span>الحالة:</span><strong style="color:var(--success);">مكتمل</strong></div>
-                        <div class="sub-info-row"><span>النوع:</span><strong id="successType">-</strong></div>
-                        <div class="sub-info-row"><span>المبلغ:</span><strong id="successAmount" style="color:var(--primary);">-</strong></div>
-                        <div class="sub-info-row"><span>محول من:</span><strong id="successPhone" dir="ltr">-</strong></div>
-                        <div class="sub-info-row"><span>محول إلى:</span><strong id="successTarget" dir="ltr">01003677165</strong></div>
-                        <div class="sub-info-row"><span>التاريخ:</span><strong id="successDate">-</strong></div>
-                    </div>
-                </div>
-                <button class="btn btn-primary btn-block" id="closeSuccessBtn">تم</button>
-            </div>
-        </div>
-    </div>
-
     <!-- مودال طباعة الفاتورة -->
     <div class="modal" id="receiptModal">
         <div class="modal-content receipt-modal">
@@ -604,6 +530,7 @@
     </div>
 
     <script src="js/medicines.js"></script>
+    <script src="js/api.js"></script>
     <script src="js/app.js"></script>
 
   <a href="https://wa.me/201003677165?text=مرحباً%20محمد%2C%20أنا%20مهتم%20بـ%20ValoPOS" class="whatsapp-float" target="_blank" rel="noopener" aria-label="واتساب">
