@@ -31,57 +31,7 @@
 
     <div id="toastContainer"></div>
 
-    <!-- ===== Login Page ===== -->
-    <div class="login-page" id="loginPage">
-        <div class="login-card">
-            <div class="login-header">
-                <span class="login-logo">+</span>
-                <h1>ValoPOS</h1>
-                <p>نظام إدارة الصيدليات</p>
-            </div>
-            <div class="login-tabs">
-                <button class="login-tab active" data-tab="login">تسجيل الدخول</button>
-                <button class="login-tab" data-tab="register">إنشاء حساب</button>
-            </div>
-            <div class="login-form" id="loginForm">
-                <div class="form-group">
-                    <label>اسم المستخدم</label>
-                    <input type="text" class="form-input" id="loginUsername" placeholder="أدخل اسم المستخدم" autocomplete="username">
-                </div>
-                <div class="form-group">
-                    <label>كلمة المرور</label>
-                    <input type="password" class="form-input" id="loginPassword" placeholder="أدخل كلمة المرور" autocomplete="current-password">
-                </div>
-                <div class="login-error" id="loginError"></div>
-                <button class="btn btn-primary btn-block" id="loginBtn">تسجيل الدخول</button>
-            </div>
-            <div class="login-form" id="registerForm" style="display:none;">
-                <div class="form-group">
-                    <label>اسم المستخدم</label>
-                    <input type="text" class="form-input" id="regUsername" placeholder="اسم المستخدم">
-                </div>
-                <div class="form-group">
-                    <label>الاسم الظاهر</label>
-                    <input type="text" class="form-input" id="regDisplayName" placeholder="الاسم الكامل">
-                </div>
-                <div class="form-group">
-                    <label>كلمة المرور</label>
-                    <input type="password" class="form-input" id="regPassword" placeholder="كلمة المرور">
-                </div>
-                <div class="form-group" id="regAdminGroup" style="display:none;">
-                    <label>كلمة مرور المدير (لإنشاء صلاحيات أعلى)</label>
-                    <input type="password" class="form-input" id="regAdminPassword" placeholder="كلمة مرور المدير">
-                </div>
-                <div class="register-error" id="registerError"></div>
-                <button class="btn btn-primary btn-block" id="registerBtn">إنشاء حساب</button>
-            </div>
-            <div class="login-footer">
-                <span id="loginServerStatus">جاري الاتصال بالخادم...</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="app-container" id="appContainer" style="display:none;">
+    <div class="app-container" id="appContainer">
         <!-- ========== الشريط الجانبي ========== -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
@@ -141,7 +91,6 @@
                         <i class="fas fa-moon"></i>
                     </button>
                     <div class="user-avatar" id="headerAvatar">أ</div>
-                    <button class="header-btn" id="logoutBtn" title="تسجيل الخروج" style="background:none;border:none;color:var(--text-light);cursor:pointer;font-size:18px;padding:0 8px;"><i class="fas fa-sign-out-alt"></i></button>
                 </div>
             </header>
 
