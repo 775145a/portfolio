@@ -1741,7 +1741,7 @@ textarea.form-input {
     font-size: 14px;
 }
 
-.toast-container {
+#toastContainer {
     position: fixed;
     top: 20px;
     left: 50%;
@@ -2377,3 +2377,28 @@ textarea.form-input {
     .sidebar { width: 260px; }
     .nav-item { padding: 10px 16px; font-size: 13px; }
 }
+
+/* ====== New components for v2 ====== */
+.debt-badge { font-size:12px;padding:2px 8px;border-radius:6px;font-weight:600; }
+.debt-badge.positive { color:var(--danger);background:rgba(239,68,68,0.12); }
+.debt-badge.zero { color:var(--success);background:rgba(16,185,129,0.12); }
+
+.med-item.expired { opacity:0.5; }
+.med-item.expired .med-name::after { content:" منتهي";color:var(--danger);font-size:10px; }
+.med-item.expiring { border-color:var(--warning); }
+
+.inline-edit { cursor:pointer;padding:2px 4px;border-radius:4px;transition:var(--transition); }
+.inline-edit:hover { background:var(--bg-alt); }
+.inline-edit.editing { background:var(--bg-alt);padding:0; }
+.inline-edit.editing input { width:100%;padding:4px 6px;border:2px solid var(--primary);border-radius:4px;font-size:13px;background:var(--bg-card);color:var(--text); }
+
+.keyboard-hint { position:fixed;bottom:16px;left:16px;z-index:100;background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text-muted);box-shadow:var(--shadow-md);display:flex;flex-direction:column;gap:4px;max-width:220px; }
+.keyboard-hint kbd { display:inline-block;padding:1px 6px;border-radius:4px;background:var(--bg-alt);border:1px solid var(--border);font-family:var(--font-mono);font-size:11px; }
+.keyboard-hint-close { position:absolute;top:4px;left:4px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px; }
+@media(max-width:768px){.keyboard-hint{display:none;}}
+
+.purchase-item-row td { vertical-align:middle; }
+.purchase-item-row .remove-item { color:var(--danger);cursor:pointer;font-size:18px;padding:4px;border-radius:4px;transition:var(--transition); }
+.purchase-item-row .remove-item:hover { background:rgba(239,68,68,0.12); }
+
+.report-filters .form-input { height:38px; }

@@ -57,6 +57,14 @@
                     <span class="nav-icon">&#x1F4E6;</span>
                     <span>المخزون</span>
                 </a>
+                <a href="#" class="nav-item" data-page="suppliers">
+                    <span class="nav-icon">&#x1F4E2;</span>
+                    <span>الموردون</span>
+                </a>
+                <a href="#" class="nav-item" data-page="purchases">
+                    <span class="nav-icon">&#x1F4ED;</span>
+                    <span>فواتير الشراء</span>
+                </a>
                 <a href="#" class="nav-item" data-page="customers">
                     <span class="nav-icon">&#x1F465;</span>
                     <span>العملاء</span>
@@ -162,7 +170,7 @@
                             <div class="table-responsive">
                                 <table class="table" id="recentSalesTable">
                                     <thead>
-                                        <tr><th>الفاتورة</th><th>المبلغ</th><th>التاريخ</th><th>الحالة</th></tr>
+                                        <tr><th>الفاتورة</th><th>المبلغ</th><th>التاريخ</th><th>الحالة</th><th></th></tr>
                                     </thead>
                                     <tbody id="recentSalesBody">
                                         <tr><td colspan="4" class="text-center empty-state">لا توجد مبيعات بعد</td></tr>
@@ -267,6 +275,7 @@
                     <h1>إدارة المخزون</h1>
                     <div>
                         <button class="btn btn-primary" id="addStockBtn">+ إضافة مخزون</button>
+                        <button class="btn btn-info" id="addMedBtn">+ دواء جديد</button>
                         <button class="btn btn-success" id="exportBtn">&#x1F4E4; تصدير</button>
                     </div>
                 </div>
@@ -305,6 +314,67 @@
                 </div>
             </section>
 
+            <!-- ===== صفحة الموردون ===== -->
+            <section class="page" id="page-suppliers">
+                <div class="page-header">
+                    <h1>إدارة الموردين</h1>
+                    <button class="btn btn-primary" id="addSupplierBtn">+ مورد جديد</button>
+                </div>
+                <div class="supplier-controls">
+                    <input type="text" id="supplierSearch" class="form-input" placeholder="بحث عن مورد..." style="flex:1;">
+                </div>
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table" id="suppliersTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>الاسم</th>
+                                    <th>الهاتف</th>
+                                    <th>العنوان</th>
+                                    <th>الملاحظات</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="suppliersBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== صفحة فواتير الشراء ===== -->
+            <section class="page" id="page-purchases">
+                <div class="page-header">
+                    <h1>فواتير الشراء</h1>
+                    <button class="btn btn-primary" id="addPurchaseBtn">+ فاتورة شراء جديدة</button>
+                </div>
+                <div class="purchase-controls">
+                    <input type="text" id="purchaseSearch" class="form-input" placeholder="بحث في فواتير الشراء..." style="flex:1;">
+                    <select id="purchaseSupplierFilter" class="form-select">
+                        <option value="الكل">كل الموردين</option>
+                    </select>
+                </div>
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table" id="purchasesTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>المورد</th>
+                                    <th>التاريخ</th>
+                                    <th>عدد الأصناف</th>
+                                    <th>الإجمالي</th>
+                                    <th>الخصم</th>
+                                    <th>الصافي</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="purchasesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
             <!-- ===== صفحة العملاء ===== -->
             <section class="page" id="page-customers">
                 <div class="page-header">
@@ -318,15 +388,16 @@
                     <div class="table-responsive">
                         <table class="table" id="customersTable">
                             <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>الاسم</th>
-                                    <th>الهاتف</th>
-                                    <th>الإجمالي</th>
-                                    <th>النقاط</th>
-                                    <th>آخر شراء</th>
-                                    <th>إجراءات</th>
-                                </tr>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>الاسم</th>
+                                        <th>الهاتف</th>
+                                        <th>الإجمالي</th>
+                                        <th>النقاط</th>
+                                        <th>المديونية</th>
+                                        <th>آخر شراء</th>
+                                        <th>إجراءات</th>
+                                    </tr>
                             </thead>
                             <tbody id="customersBody"></tbody>
                         </table>
@@ -338,6 +409,12 @@
             <section class="page" id="page-reports">
                 <div class="page-header">
                     <h1>التقارير</h1>
+                </div>
+                <div class="report-filters" style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+                    <input type="date" id="reportDateFrom" class="form-input" style="width:160px;">
+                    <input type="date" id="reportDateTo" class="form-input" style="width:160px;">
+                    <button class="btn btn-sm btn-primary" id="filterReportsBtn">تصفية</button>
+                    <button class="btn btn-sm btn-success" id="exportCsvBtn">تصدير CSV</button>
                 </div>
                 <div class="reports-grid">
                     <div class="card">
@@ -364,8 +441,8 @@
                     <div class="card full-width">
                         <div class="card-header"><h3>جميع الفواتير</h3></div>
                         <div class="table-responsive">
-                            <table class="table" id="allInvoicesTable">
-                                <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>عدد الأصناف</th><th>الإجمالي</th><th>الخصم</th><th>الصافي</th></tr></thead>
+                                <table class="table" id="allInvoicesTable">
+                                    <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>عدد الأصناف</th><th>الإجمالي</th><th>الخصم</th><th>الصافي</th><th>الحالة</th><th></th></tr></thead>
                                 <tbody id="allInvoicesBody"><tr><td colspan="6" class="text-center empty-state">لا توجد فواتير</td></tr></tbody>
                             </table>
                         </div>
@@ -393,6 +470,18 @@
                             <div class="form-group">
                                 <label>رقم التليفون</label>
                                 <input type="text" id="pharmacyPhone" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label>تذييل الفاتورة</label>
+                                <textarea id="receiptFooter" class="form-input" rows="2" placeholder="شكراً لتعاملكم معنا"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>نسبة الضريبة (%)</label>
+                                <input type="number" id="taxRate" class="form-input" min="0" max="100" step="0.5" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label>العملة</label>
+                                <input type="text" id="currency" class="form-input" value="ج.م">
                             </div>
                             <button class="btn btn-primary" onclick="saveSettings()">حفظ الإعدادات</button>
                         </div>
@@ -433,6 +522,153 @@
                 <input type="date" id="stockExpiryInput" class="form-input">
             </div>
             <button class="btn btn-success btn-block" id="saveStockBtn">حفظ</button>
+        </div>
+    </div>
+
+    <!-- مودال إضافة دواء جديد -->
+    <div class="modal" id="addMedModal">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <h2>إضافة دواء جديد</h2>
+            <div class="form-group">
+                <label>اسم الدواء <span class="required">*</span></label>
+                <input type="text" id="newMedName" class="form-input" placeholder="اسم الدواء">
+            </div>
+            <div class="form-group">
+                <label>المادة الفعالة</label>
+                <input type="text" id="newMedScientific" class="form-input" placeholder="المادة الفعالة">
+            </div>
+            <div class="form-group">
+                <label>التصنيف</label>
+                <select id="newMedCategory" class="form-select">
+                    <option value="عام">عام</option>
+                    <option value="مضادات حيوية">مضادات حيوية</option>
+                    <option value="مسكنات">مسكنات</option>
+                    <option value="فيتامينات">فيتامينات</option>
+                    <option value="معدة وجهاز هضمي">معدة وجهاز هضمي</option>
+                    <option value="ضغط وقلب">ضغط وقلب</option>
+                    <option value="سكري">سكري</option>
+                    <option value="حساسية">حساسية</option>
+                    <option value="أمراض جلدية">أمراض جلدية</option>
+                    <option value="أطفال">أطفال</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>سعر البيع (ج.م) <span class="required">*</span></label>
+                <input type="number" id="newMedPrice" class="form-input" min="0" step="0.5" placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label>الكمية</label>
+                <input type="number" id="newMedQty" class="form-input" min="0" value="0">
+            </div>
+            <div class="form-group">
+                <label>تاريخ الصلاحية</label>
+                <input type="date" id="newMedExpiry" class="form-input">
+            </div>
+            <div class="form-group">
+                <label>الباركود</label>
+                <input type="text" id="newMedBarcode" class="form-input" placeholder="رقم الباركود">
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="newMedRx"> يحتاج وصفة طبية</label>
+            </div>
+            <button class="btn btn-success btn-block" id="saveNewMedBtn">إضافة الدواء</button>
+        </div>
+    </div>
+
+    <!-- مودال مورد -->
+    <div class="modal" id="supplierModal">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <h2 id="supplierModalTitle">إضافة مورد جديد</h2>
+            <input type="hidden" id="supplierEditId" value="">
+            <div class="form-group">
+                <label>الاسم <span class="required">*</span></label>
+                <input type="text" id="supplierNameInput" class="form-input" placeholder="اسم المورد">
+            </div>
+            <div class="form-group">
+                <label>رقم الهاتف</label>
+                <input type="tel" id="supplierPhoneInput" class="form-input" placeholder="01123456789" dir="ltr" style="text-align:left;">
+            </div>
+            <div class="form-group">
+                <label>العنوان</label>
+                <input type="text" id="supplierAddressInput" class="form-input" placeholder="عنوان المورد">
+            </div>
+            <div class="form-group">
+                <label>ملاحظات</label>
+                <textarea id="supplierNotesInput" class="form-input" rows="2" placeholder="أي ملاحظات"></textarea>
+            </div>
+            <button class="btn btn-success btn-block" id="saveSupplierBtn">حفظ المورد</button>
+        </div>
+    </div>
+
+    <!-- مودال فاتورة شراء -->
+    <div class="modal" id="purchaseModal">
+        <div class="modal-content" style="max-width:700px;">
+            <span class="modal-close">&times;</span>
+            <h2 id="purchaseModalTitle">فاتورة شراء جديدة</h2>
+            <input type="hidden" id="purchaseEditId" value="">
+            <div class="form-group">
+                <label>المورد</label>
+                <select id="purchaseSupplierSelect" class="form-select">
+                    <option value="">اختر المورد</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>الخصم (ج.م)</label>
+                <input type="number" id="purchaseDiscount" class="form-input" min="0" value="0">
+            </div>
+            <div class="form-group">
+                <label>ملاحظات</label>
+                <textarea id="purchaseNotes" class="form-input" rows="2" placeholder="ملاحظات"></textarea>
+            </div>
+            <h4 style="margin-bottom:10px;">الأصناف المشتراة</h4>
+            <div class="purchase-items-controls" style="display:flex;gap:8px;margin-bottom:10px;">
+                <select id="purchaseMedSelect" class="form-select" style="flex:1;">
+                    <option value="">اختر دواء</option>
+                </select>
+                <input type="number" id="purchaseMedQty" class="form-input" placeholder="الكمية" min="1" value="1" style="width:80px;">
+                <input type="number" id="purchaseMedPrice" class="form-input" placeholder="سعر الشراء" min="0" step="0.5" style="width:100px;">
+                <input type="date" id="purchaseMedExpiry" class="form-input" style="width:140px;">
+                <button class="btn btn-sm btn-primary" id="addPurchaseItemBtn">+</button>
+            </div>
+            <div class="card" style="margin-bottom:10px;">
+                <table class="table" id="purchaseItemsTable">
+                    <thead><tr><th>الدواء</th><th>الكمية</th><th>سعر الشراء</th><th>تاريخ الصلاحية</th><th>المجموع</th><th></th></tr></thead>
+                    <tbody id="purchaseItemsBody"></tbody>
+                </table>
+            </div>
+            <div style="text-align:left;font-size:18px;font-weight:700;margin-bottom:10px;">
+                الإجمالي: <span id="purchaseTotal">0.00</span> ج.م
+            </div>
+            <button class="btn btn-success btn-block" id="savePurchaseBtn">حفظ فاتورة الشراء</button>
+        </div>
+    </div>
+
+    <!-- مودال تأكيد البيع -->
+    <div class="modal" id="confirmSaleModal">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="modal-close">&times;</span>
+            <h2>تأكيد البيع</h2>
+            <div id="confirmSaleContent"></div>
+            <div style="display:flex;gap:10px;margin-top:15px;">
+                <button class="btn btn-success" id="confirmSaleYes" style="flex:1;">تأكيد</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('confirmSaleModal').style.display='none'" style="flex:1;">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- مودال إلغاء فاتورة -->
+    <div class="modal" id="cancelInvoiceModal">
+        <div class="modal-content" style="max-width:400px;">
+            <span class="modal-close">&times;</span>
+            <h2>إلغاء الفاتورة</h2>
+            <p>هل أنت متأكد من إلغاء هذه الفاتورة؟ سيتم إرجاع المخزون.</p>
+            <input type="hidden" id="cancelInvoiceId" value="">
+            <div style="display:flex;gap:10px;margin-top:15px;">
+                <button class="btn btn-danger" id="confirmCancelInvoice" style="flex:1;">إلغاء الفاتورة</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('cancelInvoiceModal').style.display='none'" style="flex:1;">رجوع</button>
+            </div>
         </div>
     </div>
 
