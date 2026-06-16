@@ -999,16 +999,121 @@ addToCart = function(med) {
     });
 })();
 
-loadData();
-loadCategories();
-loadSettings();
-renderMedsGrid();
-renderCart();
-renderDashboard();
-renderInventory();
-renderReports();
-renderCustomers();
-loadCustomerSelect();
+// Auth functions
+window.showLogin = function() {
+    document.getElementById('loginPage').style.display = 'flex';
+    document.getElementById('appContainer').style.display = 'none';
+};
+window.showApp = function() {
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('appContainer').style.display = 'flex';
+    loadData();
+    loadCategories();
+    loadSettings();
+    renderMedsGrid();
+    renderCart();
+    renderDashboard();
+    renderInventory();
+    renderReports();
+    renderCustomers();
+    loadCustomerSelect();
+};
+
+// Tab switching
+document.querySelectorAll('.login-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+        document.querySelectorAll('.login-tab').forEach(function(t) { t.classList.remove('active'); });
+        this.classList.add('active');
+        var tabName = this.getAttribute('data-tab');
+        document.getElementById('loginForm').style.display = tabName === 'login' ? 'block' : 'none';
+        document.getElementById('registerForm').style.display = tabName === 'register' ? 'block' : 'none';
+        document.getElementById('loginError').textContent = '';
+        document.getElementById('registerError').textContent = '';
+    });
+});
+
+// Role selection in register
+var regRole = document.createElement('div');
+regRole.className = 'form-group';
+regRole.innerHTML = '<label>الصلاحية</label><select class="form-select" id="regRole"><option value="cashier">كاشير</option><option value="manager">مدير</option><option value="admin">مدير عام</option></select>';
+document.getElementById('regPassword').parentNode.insertBefore(regRole, document.getElementById('regAdminGroup'));
+
+document.getElementById('regRole').addEventListener('change', function() {
+    document.getElementById('regAdminGroup').style.display = this.value !== 'cashier' ? 'block' : 'none';
+});
+
+// Login
+document.getElementById('loginBtn').addEventListener('click', function() {
+    var username = document.getElementById('loginUsername').value.trim();
+    var password = document.getElementById('loginPassword').value.trim();
+    var errEl = document.getElementById('loginError');
+    if (!username || !password) { errEl.textContent = 'الرجاء إدخال اسم المستخدم وكلمة المرور'; return; }
+    errEl.textContent = 'جاري تسجيل الدخول...';
+    this.disabled = true;
+    API.login(username, password).then(function(res) {
+        API.setAuth(res.token, res.user);
+        window.showApp();
+    }).catch(function(e) {
+        errEl.textContent = e.message || 'فشل تسجيل الدخول';
+    }).finally(function() {
+        document.getElementById('loginBtn').disabled = false;
+    });
+});
+
+// Register
+document.getElementById('registerBtn').addEventListener('click', function() {
+    var username = document.getElementById('regUsername').value.trim();
+    var displayName = document.getElementById('regDisplayName').value.trim();
+    var password = document.getElementById('regPassword').value.trim();
+    var role = document.getElementById('regRole').value;
+    var errEl = document.getElementById('registerError');
+    if (!username || !displayName || !password) { errEl.textContent = 'الرجاء ملء جميع الحقول'; return; }
+    var data = { username: username, display_name: displayName, password: password, role: role };
+    if (role !== 'cashier') {
+        data.admin_password = document.getElementById('regAdminPassword').value.trim();
+    }
+    errEl.textContent = 'جاري إنشاء الحساب...';
+    this.disabled = true;
+    API.register(data).then(function(res) {
+        API.setAuth(res.token, res.user);
+        window.showApp();
+    }).catch(function(e) {
+        errEl.textContent = e.message || 'فشل إنشاء الحساب';
+    }).finally(function() {
+        document.getElementById('registerBtn').disabled = false;
+    });
+});
+
+// Logout
+document.getElementById('logoutBtn') && document.getElementById('logoutBtn').addEventListener('click', function() {
+    API.clearAuth();
+    window.showLogin();
+});
+
+// Server status check
+function checkServer() {
+    var el = document.getElementById('loginServerStatus');
+    fetch(API.BASE_URL + '/api/health').then(function(r) { return r.json(); }).then(function(d) {
+        if (el) el.textContent = '✓ الخادم متصل | v' + (d.version || '2.0');
+    }).catch(function() {
+        if (el) el.textContent = '✗ الخادم غير متصل';
+    });
+}
+checkServer();
+
+// Init
+if (API.isLoggedIn()) {
+    API.getMe().then(function(user) {
+        API.setAuth(API.getToken(), user);
+        window.showApp();
+    }).catch(function() {
+        API.clearAuth();
+        window.showLogin();
+    });
+} else {
+    window.showLogin();
+}
+
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function(err) {
         console.log('SW registration failed:', err);
