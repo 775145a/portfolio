@@ -2,7 +2,7 @@
   "name": "ValoPOS - نظام كاشير الصيدلية",
   "short_name": "ValoPOS",
   "description": "نظام كاشير وإدارة صيدليات متكامل - فواتير، مخزون، عملاء، تقارير",
-  "start_url": "/valopos.html",
+  "start_url": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#0f172a",

@@ -17,3 +17,5 @@ s_out.txt
 *.log
 login.json
 start_server.bat
+
+.vercel

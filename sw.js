@@ -4,7 +4,8 @@ self.addEventListener('install', function(e) {
     e.waitUntil(
         caches.open(CACHE).then(function(cache) {
             return cache.addAll([
-                '/valopos.html',
+                '/',
+                '/index.html',
                 '/css/style.css',
                 '/js/api.js',
                 '/js/app.js',
@@ -27,7 +28,7 @@ self.addEventListener('fetch', function(e) {
                 });
             });
         }).catch(function() {
-            return caches.match('/valopos.html');
+            return caches.match('/index.html');
         })
     );
 });

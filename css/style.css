@@ -2402,3 +2402,49 @@ textarea.form-input {
 .purchase-item-row .remove-item:hover { background:rgba(239,68,68,0.12); }
 
 .report-filters .form-input { height:38px; }
+
+/* ====== شاشة تسجيل الدخول ====== */
+.auth-overlay {
+    position:fixed;inset:0;z-index:10000;
+    background:var(--bg);
+    display:flex;align-items:center;justify-content:center;
+    backdrop-filter:blur(4px);
+}
+.auth-box {
+    background:var(--bg-card);border-radius:20px;padding:36px 32px 24px;
+    width:380px;max-width:90vw;box-shadow:var(--shadow-xl);
+    text-align:center;
+}
+.auth-header .auth-logo {
+    width:64px;height:64px;border-radius:50%;
+    background:linear-gradient(135deg,var(--primary),var(--secondary));
+    color:#fff;font-size:2.2rem;font-weight:800;
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 12px;box-shadow:0 0 30px var(--primary-glow);
+}
+.auth-header h1 { font-size:1.5rem;margin:4px 0;color:var(--text); }
+.auth-header p { font-size:0.85rem;color:var(--text-light);margin-bottom:20px; }
+.auth-body .form-group { margin-bottom:14px;text-align:right; }
+.auth-body .form-label { display:block;font-size:0.8rem;font-weight:600;color:var(--text-light);margin-bottom:4px; }
+.auth-body .form-input { width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.95rem; }
+.auth-body .form-input:focus { border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow);outline:none; }
+.auth-error { color:var(--danger);font-size:0.8rem;min-height:20px;margin:6px 0 0; }
+.auth-hint { font-size:0.75rem;color:var(--text-muted);margin:8px 0 0; }
+.auth-footer { display:flex;justify-content:space-between;margin-top:18px;padding-top:14px;border-top:1px solid var(--border-light);font-size:0.75rem;color:var(--text-muted); }
+#authModeBtn:hover { text-decoration:underline; }
+
+/* ====== Pagination controls ====== */
+.pagination {
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    padding:10px 0;margin-top:6px;
+}
+.pagination .page-btn {
+    min-width:32px;height:32px;border-radius:6px;
+    border:1px solid var(--border);background:var(--bg-card);
+    color:var(--text);font-size:0.8rem;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:var(--transition);
+}
+.pagination .page-btn:hover { background:var(--bg-alt);border-color:var(--primary); }
+.pagination .page-btn.active { background:var(--primary);color:#fff;border-color:var(--primary); }
+.pagination .page-btn:disabled { opacity:0.4;cursor:default; }

@@ -1,5 +1,5 @@
 {
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/valopos.html" }
+  "redirects": [
+    { "source": "/valopos.html", "destination": "/", "permanent": true }
   ]
 }
