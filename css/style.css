@@ -1265,6 +1265,45 @@ body {
     animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+.cart-prescription {
+    border-bottom: 1px solid var(--border-light);
+    padding: 4px 16px;
+}
+.prescription-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-light);
+    user-select: none;
+}
+.prescription-toggle:hover { color: var(--primary); }
+.prescription-arrow { font-size: 10px; transition: transform 0.2s; }
+.prescription-content {
+    padding: 4px 0 10px;
+    border-top: 1px dashed var(--border-light);
+    margin-top: 2px;
+}
+.prescription-content .form-group { margin-bottom: 8px; }
+.prescription-content .form-group:last-child { margin-bottom: 0; }
+.prescription-content .form-group label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+    font-weight: 500;
+}
+.prescription-content .form-input {
+    padding: 6px 10px;
+    font-size: 13px;
+}
+.cart-prescription .form-group {
+    display: flex;
+    flex-direction: column;
+}
 .cart-customer-select {
     padding: 10px 16px;
     display: flex;
@@ -1678,6 +1717,7 @@ textarea.form-input {
 }
 
 .receipt-modal { max-width: 350px; }
+.print-buttons { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
 
 .receipt {
     font-size: 12px;
@@ -1688,6 +1728,9 @@ textarea.form-input {
 
 .receipt h3 { font-size: 16px; margin-bottom: 5px; }
 .receipt .receipt-line { border-top: 1px dashed #999; margin: 10px 0; }
+.rx-icon { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; font-size:13px; cursor:help; }
+.rx-badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:2px 8px; border-radius:10px; background:var(--primary-lighter); color:var(--primary-darker); cursor:pointer; white-space:nowrap; }
+.rx-badge:hover { background:var(--primary-light); color:#fff; }
 .receipt .receipt-row { display: flex; justify-content: space-between; font-size: 12px; }
 .receipt .receipt-total { font-size: 16px; font-weight: 700; color: var(--primary); }
 
@@ -2448,3 +2491,216 @@ textarea.form-input {
 .pagination .page-btn:hover { background:var(--bg-alt);border-color:var(--primary); }
 .pagination .page-btn.active { background:var(--primary);color:#fff;border-color:var(--primary); }
 .pagination .page-btn:disabled { opacity:0.4;cursor:default; }
+
+/* ====== Returns styles ====== */
+.return-items-list {
+    margin-bottom: 16px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.return-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border-light);
+    gap: 10px;
+}
+
+.return-item:last-child {
+    border-bottom: none;
+}
+
+.return-item-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    cursor: pointer;
+}
+
+.return-item-cb {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.return-item-name {
+    font-weight: 600;
+    font-size: 14px;
+    flex: 1;
+}
+
+.return-item-price {
+    font-size: 13px;
+    color: var(--primary);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.return-item-qty-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-light);
+}
+
+.return-item-qty-wrap .return-item-qty {
+    padding: 4px 6px;
+    font-size: 13px;
+    text-align: center;
+}
+
+/* ====== Profit styles ====== */
+.profit-card .card-header h3 {
+    color: var(--success);
+}
+
+.profit-number {
+    color: var(--success) !important;
+}
+
+.profit-number::before {
+    content: '\2191 ';
+    font-size: 24px;
+}
+
+#reportProfitMargin {
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 16px;
+}
+
+/* ====== Profit Chart (CSS bar chart) ====== */
+.profit-chart {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 12px;
+    height: 200px;
+    padding: 16px 0 0;
+}
+
+.profit-chart-bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    max-width: 70px;
+}
+
+.profit-chart-bar {
+    width: 100%;
+    max-width: 50px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border-radius: 6px 6px 0 0;
+    min-height: 4px;
+    transition: var(--transition-bounce);
+    position: relative;
+    cursor: pointer;
+}
+
+.profit-chart-bar:hover {
+    opacity: 0.85;
+    transform: scaleY(1.06);
+    box-shadow: 0 0 16px var(--primary-glow);
+}
+
+.profit-chart-val {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    direction: ltr;
+}
+
+.profit-chart-label {
+    font-size: 11px;
+    color: var(--text-light);
+    margin-top: 6px;
+    font-weight: 600;
+}
+
+/* ====== Returns table ====== */
+#returnsTable th,
+#returnsTable td {
+    white-space: nowrap;
+}
+
+#returnsTable td:nth-child(4) {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#returnsTable tbody tr:hover {
+    background: rgba(239, 68, 68, 0.04);
+}
+
+/* ====== Barcode Scanner Modal ====== */
+.barcode-modal-content {
+    max-width: 480px;
+}
+
+.barcode-scanner-container {
+    position: relative;
+    width: 100%;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.barcode-scanner-container video {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius-sm);
+    background: #000;
+}
+
+.barcode-status {
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-light);
+    margin-bottom: 12px;
+    min-height: 20px;
+}
+
+.barcode-manual-input {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.barcode-manual-input .form-input {
+    flex: 1;
+}
+
+.barcode-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.barcode-actions .btn {
+    flex: 1;
+    justify-content: center;
+}
+
+@media (max-width: 480px) {
+    .barcode-modal-content {
+        margin: 12px 8px;
+        padding: 16px;
+    }
+}

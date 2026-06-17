@@ -10,7 +10,8 @@ self.addEventListener('install', function(e) {
                 '/js/api.js',
                 '/js/app.js',
                 '/js/medicines.js',
-                '/manifest.json'
+                '/manifest.json',
+                '/icons/icon.svg'
             ]);
         })
     );

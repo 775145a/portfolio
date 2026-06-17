@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ValoPOS - نظام كاشير الصيدلية</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%230d9488'/%3E%3Ctext x='50' y='72' font-size='60' text-anchor='middle' fill='white'%3E%2B%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="/icons/icon.svg">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="canonical" href="https://valopos.vercel.app/" />
+    <meta name="theme-color" content="#1a73e8">
     <meta name="description" content="ValoPOS - نظام كاشير وإدارة صيدليات متكامل. فواتير، مخزون، عملاء، تقارير. من تصميم محمد أحمد مكرم." />
     <meta name="keywords" content="نظام كاشير, صيدلية, ValoPOS, إدارة صيدليات, محمد أحمد مكرم, مطور ويب" />
     <meta property="og:title" content="ValoPOS - نظام كاشير الصيدلية" />
@@ -238,6 +239,30 @@
                             </select>
                             <button class="btn btn-sm btn-primary" id="quickAddCustomerBtn" title="إضافة عميل جديد">+</button>
                         </div>
+                        <div class="cart-prescription">
+                            <div class="prescription-toggle" onclick="togglePrescriptionSection()">
+                                <span>&#x1F4CB; معلومات الروشتة</span>
+                                <span class="prescription-arrow" id="rxArrow">&#x25BC;</span>
+                            </div>
+                            <div class="prescription-content" id="rxSection" style="display:none;">
+                                <div class="form-group">
+                                    <label>اسم الطبيب</label>
+                                    <input type="text" id="rxDoctor" class="form-input" placeholder="اسم الطبيب">
+                                </div>
+                                <div class="form-group">
+                                    <label>التشخيص</label>
+                                    <textarea id="rxDiagnosis" class="form-input" rows="2" placeholder="التشخيص"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>عدد مرات إعادة الصرف</label>
+                                    <input type="number" id="rxRefills" class="form-input" min="0" value="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>تاريخ الروشتة</label>
+                                    <input type="date" id="rxDate" class="form-input">
+                                </div>
+                            </div>
+                        </div>
                         <div class="cart-items" id="cartItems">
                             <p class="text-center empty-cart">لا توجد أصناف في الفاتورة</p>
                         </div>
@@ -277,10 +302,14 @@
                         <button class="btn btn-primary" id="addStockBtn">+ إضافة مخزون</button>
                         <button class="btn btn-info" id="addMedBtn">+ دواء جديد</button>
                         <button class="btn btn-success" id="exportBtn">&#x1F4E4; تصدير</button>
+                        <button class="btn btn-info" onclick="exportInventoryCSV()">&#x1F4CA; تصدير CSV</button>
                     </div>
                 </div>
                 <div class="inventory-controls">
-                    <input type="text" id="invSearch" class="form-input" placeholder="بحث في المخزون..." style="flex:1">
+                    <div style="display:flex;gap:6px;flex:1">
+                        <input type="text" id="invSearch" class="form-input" placeholder="بحث في المخزون..." style="flex:1">
+                        <button class="btn btn-sm btn-primary" id="barcodeScanInvBtn" title="مسح الباركود بالكاميرا">&#x1F4F7;</button>
+                    </div>
                     <select id="invCategory" class="form-select">
                         <option value="الكل">كل التصنيفات</option>
                     </select>
@@ -438,12 +467,48 @@
                             <p>إجمالي الفواتير: <span id="reportTotalCount">0</span></p>
                         </div>
                     </div>
+                    <div class="card profit-card">
+                        <div class="card-header"><h3>إجمالي الربح</h3></div>
+                        <div class="card-body text-center">
+                            <div class="big-number profit-number" id="reportTotalProfit">0 ج.م</div>
+                            <p>نسبة الربح: <span id="reportProfitMargin">0%</span></p>
+                        </div>
+                    </div>
+                    <div class="card profit-card">
+                        <div class="card-header"><h3>ربح اليوم</h3></div>
+                        <div class="card-body text-center">
+                            <div class="big-number profit-number" id="reportTodayProfit">0 ج.م</div>
+                        </div>
+                    </div>
+                    <div class="card profit-card">
+                        <div class="card-header"><h3>ربح الشهر</h3></div>
+                        <div class="card-body text-center">
+                            <div class="big-number profit-number" id="reportMonthProfit">0 ج.م</div>
+                        </div>
+                    </div>
+                    <div class="card full-width">
+                        <div class="card-header"><h3>الربح اليومي (آخر 7 أيام)</h3></div>
+                        <div class="card-body">
+                            <div class="profit-chart" id="profitChart"></div>
+                        </div>
+                    </div>
                     <div class="card full-width">
                         <div class="card-header"><h3>جميع الفواتير</h3></div>
                         <div class="table-responsive">
                                 <table class="table" id="allInvoicesTable">
-                                    <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>عدد الأصناف</th><th>الإجمالي</th><th>الخصم</th><th>الصافي</th><th>الحالة</th><th></th></tr></thead>
-                                <tbody id="allInvoicesBody"><tr><td colspan="6" class="text-center empty-state">لا توجد فواتير</td></tr></tbody>
+                                    <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>عدد الأصناف</th><th>الإجمالي</th><th>الخصم</th><th>الصافي</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+                                <tbody id="allInvoicesBody"><tr><td colspan="9" class="text-center empty-state">لا توجد فواتير</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card full-width">
+                        <div class="card-header">
+                            <h3>سجل المرتجعات</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table" id="returnsTable">
+                                <thead><tr><th>#</th><th>الفاتورة</th><th>التاريخ</th><th>الأصناف</th><th>الإجمالي</th><th>السبب</th></tr></thead>
+                                <tbody id="returnsBody"><tr><td colspan="6" class="text-center empty-state">لا توجد مرتجعات بعد</td></tr></tbody>
                             </table>
                         </div>
                     </div>
@@ -487,11 +552,12 @@
                         </div>
                     </div>
                     <div class="card">
-                        <div class="card-header"><h3>البيانات</h3></div>
+                        <div class="card-header"><h3>البيانات والنسخ الاحتياطي</h3></div>
                         <div class="card-body">
                             <button class="btn btn-warning btn-block" onclick="resetData()">&#x1F5D1; مسح جميع البيانات</button>
-                            <button class="btn btn-info btn-block" onclick="exportData()">&#x1F4E5; تصدير البيانات</button>
-                            <button class="btn btn-secondary btn-block" onclick="importData()">&#x1F4E4; استيراد البيانات</button>
+                            <button class="btn btn-success btn-block" onclick="downloadBackup()">&#x1F4BE; تحميل نسخة احتياطية</button>
+                            <button class="btn btn-info btn-block" onclick="importBackup()">&#x1F4C2; استيراد نسخة احتياطية</button>
+                            <button class="btn btn-secondary btn-block" onclick="exportInventoryCSV()">&#x1F4CA; تصدير المخزون CSV</button>
                         </div>
                     </div>
                 </div>
@@ -672,6 +738,23 @@
         </div>
     </div>
 
+    <!-- مودال المرتجع -->
+    <div class="modal" id="returnModal">
+        <div class="modal-content" style="max-width:600px;">
+            <span class="modal-close">&times;</span>
+            <h2>مرتجع فاتورة #<span id="returnInvoiceId"></span></h2>
+            <div class="return-items-list" id="returnItemsList"></div>
+            <div class="form-group">
+                <label>سبب الإرجاع</label>
+                <textarea id="returnReason" class="form-input" rows="2" placeholder="سبب الإرجاع (اختياري)"></textarea>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:15px;">
+                <button class="btn btn-success" id="confirmReturnBtn" style="flex:1;">تأكيد الإرجاع</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('returnModal').style.display='none'" style="flex:1;">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
     <!-- مودال عميل -->
     <div class="modal" id="customerModal">
         <div class="modal-content">
@@ -711,7 +794,40 @@
         <div class="modal-content receipt-modal">
             <span class="modal-close">&times;</span>
             <div id="receiptContent"></div>
-            <button class="btn btn-primary btn-block print-btn" onclick="window.print()">&#x1F5A8; طباعة</button>
+            <div class="print-buttons">
+                <button class="btn btn-primary btn-block print-btn" onclick="window.print()">&#x1F5A8; طباعة</button>
+                <button class="btn btn-info btn-block" onclick="printA4(currentInvoice)">&#x1F4C4; طباعة A4</button>
+                <button class="btn btn-secondary btn-block" onclick="printThermal(currentInvoice)">&#x1F9FE; طباعة حرارية</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- مودال تفاصيل الروشتة -->
+    <div class="modal" id="rxModal">
+        <div class="modal-content" style="max-width:500px;">
+            <span class="modal-close">&times;</span>
+            <h2>&#x1F4CB; تفاصيل الروشتة</h2>
+            <div id="rxDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- مودال ماسح الباركود -->
+    <div class="modal" id="barcodeScannerModal">
+        <div class="modal-content barcode-modal-content">
+            <span class="modal-close" id="barcodeModalClose">&times;</span>
+            <h2>مسح الباركود بالكاميرا</h2>
+            <div class="barcode-scanner-container">
+                <video id="barcodeVideo" autoplay playsinline></video>
+            </div>
+            <p class="barcode-status" id="barcodeStatus">جاري تشغيل الكاميرا...</p>
+            <div class="barcode-manual-input" id="barcodeManualWrap" style="display:none;">
+                <input type="text" id="barcodeManualInput" class="form-input" placeholder="أدخل الباركود يدوياً">
+                <button class="btn btn-sm btn-primary" id="barcodeManualConfirm">تأكيد</button>
+            </div>
+            <div class="barcode-actions">
+                <button class="btn btn-primary" id="barcodeCaptureBtn">مسح</button>
+                <button class="btn btn-secondary" id="barcodeCloseBtn">إغلاق</button>
+            </div>
         </div>
     </div>
 
