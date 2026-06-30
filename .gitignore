@@ -19,3 +19,7 @@ login.json
 start_server.bat
 
 .vercel
+
+# Raw drug database source data (not needed at runtime)
+egyptian-drugs.csv
+egyptian-drugs.json

@@ -1050,25 +1050,8 @@ function saveData() {
     }
 }
 
-function saveMeds() {
-    try {
-        localStorage.setItem('pharmacy_pos_meds', JSON.stringify(medicinesDB));
-    } catch (e) {
-        console.error('Error saving medicines:', e);
-    }
-}
-
 function loadMeds() {
-    let saved = localStorage.getItem('pharmacy_pos_meds');
-    if (saved) {
-        try {
-            let parsed = JSON.parse(saved);
-            medicinesDB.length = 0;
-            parsed.forEach(function(m) { medicinesDB.push(m); });
-        } catch (e) {
-            console.error('Error loading medicines');
-        }
-    }
+    loadStock();
 }
 
 var cur = '\u062C.\u0645';
@@ -1156,10 +1139,10 @@ function getExpiryStatus(expiryDate) {
 
 function getStockStatus(med, threshold) {
     if (threshold === undefined) threshold = 10;
-    let expiryStatus = getExpiryStatus(med.expiryDate);
+    let expiryStatus = getExpiryStatus(getExpiryDate(med.id));
     if (expiryStatus === 'expired') return 'منتهي';
-    if (med.qty <= 0) return 'نفذ';
-    if (med.qty <= threshold) return 'منخفض';
+    if (getQty(med.id) <= 0) return 'نفذ';
+    if (getQty(med.id) <= threshold) return 'منخفض';
     return 'متوفر';
 }
 
@@ -1268,13 +1251,22 @@ document.getElementById('globalSearch').addEventListener('input', function() {
 function renderMedsGrid(query) {
     let grid = document.getElementById('medsGrid');
     let category = document.getElementById('posCategory').value;
-    let meds = query ? searchMedicines(query) : medicinesDB;
-    if (category !== '\u0627\u0644\u0643\u0644') {
-        meds = meds.filter(function(m) { return m.category === category; });
-    }
+    let meds = query ? searchMedicines(query) : null;
     if (!query) {
         let searchVal = document.getElementById('posSearch').value.trim();
-        if (searchVal) meds = searchMedicines(searchVal);
+        if (searchVal) { meds = searchMedicines(searchVal); }
+    }
+    if (!meds) {
+        if (category !== '\u0627\u0644\u0643\u0644') {
+            meds = getMedicinesByCategory(category);
+        }
+    }
+    if (!meds) {
+        grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">\uD83D\uDD0D</div><div class="empty-state-text">' + getText('pos.searchPlaceholder') + '</div></div>';
+        return;
+    }
+    if (category !== '\u0627\u0644\u0643\u0644' && meds.length > 200) {
+        meds = meds.filter(function(m) { return m.category === category || m.c === category; });
     }
     grid.innerHTML = '';
     if (meds.length === 0) {
@@ -1283,13 +1275,14 @@ function renderMedsGrid(query) {
     }
     meds.forEach(function(m) {
         let div = document.createElement('div');
-        let expiryStatus = getExpiryStatus(m.expiryDate);
-        let extraClass = m.qty <= 0 ? ' out-of-stock' : '';
-        if (expiryStatus === 'expired' && m.qty > 0) extraClass += ' expired';
-        else if (expiryStatus === 'soon' && m.qty > 0) extraClass += ' expiring';
+        let mQty = getQty(m.id);
+        let expiryStatus = getExpiryStatus(getExpiryDate(m.id));
+        let extraClass = mQty <= 0 ? ' out-of-stock' : '';
+        if (expiryStatus === 'expired' && mQty > 0) extraClass += ' expired';
+        else if (expiryStatus === 'soon' && mQty > 0) extraClass += ' expiring';
         div.className = 'med-item' + extraClass;
-        div.innerHTML = '\n            <span class="med-name">' + escapeHtml(m.name) + '</span>\n            <span class="med-price">' + formatPrice(m.price) + ' ' + cur + '</span>\n            <span class="med-stock">' + getText('pos.stock') + ' ' + m.qty + '</span>\n        ';
-        if (m.qty > 0 && expiryStatus !== 'expired') {
+        div.innerHTML = '\n            <span class="med-name">' + escapeHtml(m.name) + '</span>\n            <span class="med-price">' + formatPrice(m.price) + ' ' + cur + '</span>\n            <span class="med-stock">' + getText('pos.stock') + ' ' + mQty + '</span>\n        ';
+        if (mQty > 0 && expiryStatus !== 'expired') {
             div.addEventListener('click', function() { addToCart(m); });
         }
         grid.appendChild(div);
@@ -1308,7 +1301,7 @@ function doSearch() {
     if (/^\d+$/.test(q)) {
         let barcodeMatch = medicinesDB.find(function(m) { return m.barcode && m.barcode === q; });
         if (barcodeMatch) {
-            if (barcodeMatch.qty > 0) {
+            if (getQty(barcodeMatch.id) > 0) {
                 addToCart(barcodeMatch);
                 showToast('\u062A\u0645\u062A \u0625\u0636\u0627\u0641\u0629 ' + escapeHtml(barcodeMatch.name) + ' \u0639\u0646 \u0637\u0631\u064A\u0642 \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F', 'success');
                 input.value = '';
@@ -1331,8 +1324,9 @@ function doSearch() {
         results.slice(0, 8).forEach(function(m) {
             let item = document.createElement('div');
             item.className = 'search-suggestion-item';
-            item.innerHTML = '\n                <div class="search-suggestion-info">\n                    <span class="search-suggestion-name">' + highlightText(m.name, q) + '</span>\n                    <span class="search-suggestion-sub">' + highlightText(m.scientificName, q) + ' | ' + highlightText(m.category, q) + '</span>\n                </div>\n                <div style="text-align:left;">\n                    <div class="search-suggestion-price">' + formatPrice(m.price) + ' ' + cur + '</div>\n                    <div class="search-suggestion-stock">' + getText('pos.stock') + ' ' + m.qty + '</div>\n                </div>\n            ';
-            if (m.qty > 0) {
+            let mQty = getQty(m.id);
+            item.innerHTML = '\n                <div class="search-suggestion-info">\n                    <span class="search-suggestion-name">' + highlightText(m.name, q) + '</span>\n                    <span class="search-suggestion-sub">' + highlightText(m.scientificName, q) + ' | ' + highlightText(m.category, q) + '</span>\n                </div>\n                <div style="text-align:left;">\n                    <div class="search-suggestion-price">' + formatPrice(m.price) + ' ' + cur + '</div>\n                    <div class="search-suggestion-stock">' + getText('pos.stock') + ' ' + mQty + '</div>\n                </div>\n            ';
+            if (mQty > 0) {
                 item.addEventListener('click', function() {
                     addToCart(m);
                     input.value = '';
@@ -1369,7 +1363,7 @@ document.getElementById('posSearch').addEventListener('keydown', function(e) {
         if (/^\d+$/.test(q)) {
             let bm = medicinesDB.find(function(m) { return m.barcode && m.barcode === q; });
             if (bm) {
-                if (bm.qty > 0) {
+                if (getQty(bm.id) > 0) {
                     addToCart(bm);
                     showToast('\u062A\u0645\u062A \u0625\u0636\u0627\u0641\u0629 ' + escapeHtml(bm.name) + ' \u0639\u0646 \u0637\u0631\u064A\u0642 \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F', 'success');
                 } else {
@@ -1416,13 +1410,14 @@ function addToCart(med) {
         if (!confirm('\u0647\u0630\u0627 \u0627\u0644\u062F\u0648\u0627\u0621 \u0645\u0642\u064A\u062F \u0628\u0627\u0644\u062C\u062F\u0648\u0644. \u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F')) return;
     }
     let existing = appData.cart.find(function(item) { return item.id === med.id; });
+    let stockQty = getQty(med.id);
     if (existing) {
-        if (existing.qty < med.qty) existing.qty++;
+        if (existing.qty < stockQty) existing.qty++;
         else { showToast('\u0643\u0645\u064A\u0629 ' + escapeHtml(med.name) + ' \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631\u0629 \u0628\u0627\u0644\u0645\u062E\u0632\u0648\u0646', 'warning'); return; }
     } else {
         var priceType = (document.getElementById('priceTypeToggle')?.value === 'wholesale' && med.wholesalePrice > 0) ? 'wholesale' : 'retail';
         var usePrice = priceType === 'wholesale' ? (med.wholesalePrice || med.price) : med.price;
-        appData.cart.push({ id: med.id, name: med.name, price: usePrice, qty: 1, maxQty: med.qty, schedule: med.schedule || 'normal', priceType: priceType, wholesalePrice: med.wholesalePrice || 0, minWholesaleQty: med.minWholesaleQty || 10 });
+        appData.cart.push({ id: med.id, name: med.name, price: usePrice, qty: 1, maxQty: stockQty, schedule: med.schedule || 'normal', priceType: priceType, wholesalePrice: med.wholesalePrice || 0, minWholesaleQty: med.minWholesaleQty || 10 });
     }
     saveData();
     renderCart();
@@ -1599,7 +1594,7 @@ function completeSale(subtotal, discount, tax, net, paid) {
         date: new Date().toISOString(),
         items: appData.cart.map(function(item) {
             let med = medicinesDB.find(function(m) { return m.id === item.id; });
-            return { ...item, buyPrice: med ? (med.buyPrice || 0) : 0 };
+            return { ...item, buyPrice: med ? getBuyPrice(med.id) : 0 };
         }),
         subtotal: subtotal,
         discount: discount,
@@ -1651,8 +1646,7 @@ function completeSale(subtotal, discount, tax, net, paid) {
         }
     });
     appData.cart.forEach(function(item) {
-        let med = medicinesDB.find(function(m) { return m.id === item.id; });
-        if (med) med.qty = Math.max(0, med.qty - item.qty);
+        adjustStock(item.id, -item.qty);
     });
     if (customerId) {
         let customer = appData.customers.find(function(c) { return c.id === customerId; });
@@ -1664,7 +1658,7 @@ function completeSale(subtotal, discount, tax, net, paid) {
     }
     appData.cart = [];
     saveData();
-    saveMeds();
+    saveStock();
     renderCart();
     renderDashboard();
     updateCartSummary();
@@ -1848,14 +1842,14 @@ function renderInventory() {
     paged.items.forEach(function(m) {
         let statusText = getStockStatus(m);
         let statusClass = statusText === '\u0645\u062A\u0648\u0641\u0631' ? 'badge-success' : statusText === '\u0645\u0646\u062E\u0641\u0636' ? 'badge-warning' : 'badge-danger';
-        let expiryDays = getExpiryDays(m.expiryDate);
-        let expiryStatus = getExpiryStatus(m.expiryDate);
-        let expiryDisplay = m.expiryDate ? formatDateShort(m.expiryDate) : '-';
+        let expiryDays = getExpiryDays(getExpiryDate(m.id));
+        let expiryStatus = getExpiryStatus(getExpiryDate(m.id));
+        let expiryDisplay = getExpiryDate(m.id) ? formatDateShort(getExpiryDate(m.id)) : '-';
         let expiryBadge = 'green';
         if (expiryStatus === 'expired' || expiryStatus === 'soon') expiryBadge = 'red';
         else if (expiryStatus === 'warning') expiryBadge = 'yellow';
         let tr = document.createElement('tr');
-        tr.innerHTML = '\n            <td>' + m.id + '</td>\n            <td><strong class="inline-edit" data-field="name" data-id="' + m.id + '">' + escapeHtml(m.name) + '</strong></td>\n            <td class="inline-edit" data-field="scientificName" data-id="' + m.id + '">' + escapeHtml(m.scientificName) + '</td>\n            <td>' + escapeHtml(m.category) + '</td>\n            <td><strong class="inline-edit" data-field="price" data-id="' + m.id + '">' + formatPrice(m.price) + '</strong></td>\n            <td class="inline-edit" data-field="qty" data-id="' + m.id + '">' + m.qty + '</td>\n            <td><span class="expiry-badge ' + expiryBadge + '">' + expiryDisplay + (expiryDays !== null && expiryDays <= 60 ? ' (' + expiryDays + ' ' + getText('inventory.day') + ')' : '') + '</span></td>\n            <td><span class="badge ' + statusClass + '">' + statusText + '</span></td>\n            <td>' + (m.rx ? getText('inventory.rxYes') : getText('inventory.rxNo')) + '</td>\n            <td><span class="schedule-badge ' + (m.schedule || 'normal') + '">' + (m.schedule === 'schedule1' ? '🔴 جدول أول' : m.schedule === 'schedule2' ? '🟠 جدول ثاني' : m.schedule === 'schedule3' ? '🟡 جدول ثالث' : 'عادي') + '</span></td>\n            <td><button class="btn btn-sm btn-primary" onclick="editStock(' + m.id + ')">' + getText('inventory.edit') + '</button> <button class="btn btn-sm btn-info" onclick="printBarcodeLabel(' + m.id + ')"><i class="fas fa-barcode"></i></button></td>\n        ';
+        tr.innerHTML = '\n            <td>' + m.id + '</td>\n            <td><strong class="inline-edit" data-field="name" data-id="' + m.id + '">' + escapeHtml(m.name) + '</strong></td>\n            <td class="inline-edit" data-field="scientificName" data-id="' + m.id + '">' + escapeHtml(m.scientificName) + '</td>\n            <td>' + escapeHtml(m.category) + '</td>\n            <td><strong class="inline-edit" data-field="price" data-id="' + m.id + '">' + formatPrice(m.price) + '</strong></td>\n            <td>' + getQty(m.id) + '</td>\n            <td><span class="expiry-badge ' + expiryBadge + '">' + expiryDisplay + (expiryDays !== null && expiryDays <= 60 ? ' (' + expiryDays + ' ' + getText('inventory.day') + ')' : '') + '</span></td>\n            <td><span class="badge ' + statusClass + '">' + statusText + '</span></td>\n            <td>' + (m.rx ? getText('inventory.rxYes') : getText('inventory.rxNo')) + '</td>\n            <td><span class="schedule-badge ' + (m.schedule || 'normal') + '">' + (m.schedule === 'schedule1' ? '🔴 جدول أول' : m.schedule === 'schedule2' ? '🟠 جدول ثاني' : m.schedule === 'schedule3' ? '🟡 جدول ثالث' : 'عادي') + '</span></td>\n            <td><button class="btn btn-sm btn-primary" onclick="editStock(' + m.id + ')">' + getText('inventory.edit') + '</button> <button class="btn btn-sm btn-info" onclick="printBarcodeLabel(' + m.id + ')"><i class="fas fa-barcode"></i></button></td>\n        ';
         tbody.appendChild(tr);
     });
     renderPagination('invPagination', paged.page, paged.pages, 'renderInventory');
@@ -1885,9 +1879,13 @@ function renderInventory() {
                     if (field === 'price') val = Math.max(0, val);
                 }
                 if (val !== undefined && val !== '') {
-                    med[field] = val;
+                    if (field === 'qty') {
+                        adjustStock(med.id, val - getQty(med.id));
+                    } else {
+                        med[field] = val;
+                    }
                     saveData();
-                    saveMeds();
+                    saveStock();
                     renderInventory();
                     renderMedsGrid();
                     showToast(getText('inventory.updated') + ' ' + escapeHtml(med.name), 'success');
@@ -2009,10 +2007,10 @@ function editStock(id) {
     let med = getMedicineById(id);
     if (!med) return;
     let sel = document.getElementById('stockMedSelect');
-    sel.innerHTML = '<option value="' + med.id + '">' + escapeHtml(med.name) + ' (\u0645\u062E\u0632\u0648\u0646: ' + med.qty + ')</option>';
+    sel.innerHTML = '<option value="' + med.id + '">' + escapeHtml(med.name) + ' (\u0645\u062E\u0632\u0648\u0646: ' + getQty(med.id) + ')</option>';
     document.getElementById('stockQtyInput').value = 10;
     document.getElementById('stockPriceInput').value = med.price;
-    document.getElementById('stockExpiryInput').value = med.expiryDate || '';
+    document.getElementById('stockExpiryInput').value = getExpiryDate(med.id) || '';
     document.getElementById('stockModal').style.display = 'block';
 }
 
@@ -2020,7 +2018,7 @@ document.getElementById('addStockBtn').addEventListener('click', function() {
     let sel = document.getElementById('stockMedSelect');
     sel.innerHTML = '';
     medicinesDB.forEach(function(m) {
-        sel.innerHTML += '<option value="' + m.id + '">' + escapeHtml(m.name) + ' (\u0645\u062E\u0632\u0648\u0646: ' + m.qty + ')</option>';
+        sel.innerHTML += '<option value="' + m.id + '">' + escapeHtml(m.name) + ' (\u0645\u062E\u0632\u0648\u0646: ' + getQty(m.id) + ')</option>';
     });
     document.getElementById('stockQtyInput').value = 10;
     document.getElementById('stockPriceInput').value = '';
@@ -2035,11 +2033,11 @@ document.getElementById('saveStockBtn').addEventListener('click', function() {
     let expiry = document.getElementById('stockExpiryInput').value;
     let med = getMedicineById(id);
     if (!med) return;
-    if (qty > 0) med.qty += qty;
+    if (qty > 0) adjustStock(med.id, qty);
     if (price > 0) med.price = price;
-    if (expiry) med.expiryDate = expiry;
+    if (expiry) updateStock(med.id, undefined, undefined, expiry);
     saveData();
-    saveMeds();
+    saveStock();
     renderInventory();
     renderMedsGrid();
     document.getElementById('stockModal').style.display = 'none';
@@ -2084,25 +2082,25 @@ document.getElementById('saveNewMedBtn').addEventListener('click', function() {
     }
     let maxId = 0;
     medicinesDB.forEach(function(m) { if (m.id > maxId) maxId = m.id; });
-    medicinesDB.push({
-        id: maxId + 1,
+    var newId = maxId + 1;
+    var newMed = {
+        id: newId,
         name: name,
         scientificName: scientific || '-',
         category: category,
         price: price,
-        buyPrice: 0,
-        qty: qty,
-        expiryDate: expiry || '',
         barcode: barcode,
         rx: rx,
         schedule: schedule,
         wholesalePrice: wholesalePrice,
-        minWholesaleQty: minWholesaleQty,
-        batchNumber: batchNumber,
-        reorderPoint: reorderPoint
-    });
+        minWholesaleQty: minWholesaleQty
+    };
+    medicinesDB.push(newMed);
+    medIndexById[newId] = newMed;
+    updateStock(newId, qty, 0, expiry, batchNumber);
+    setStock(newId, { rp: reorderPoint });
     saveData();
-    saveMeds();
+    saveStock();
     renderInventory();
     renderMedsGrid();
     loadCategories();
@@ -2467,16 +2465,16 @@ document.getElementById('savePurchaseBtn').addEventListener('click', function() 
     purchaseItems.forEach(function(p) {
         let med = getMedicineById(p.medId);
         if (med) {
-            med.qty = (med.qty || 0) + p.qty;
+            adjustStock(p.medId, p.qty);
             if (p.price > 0) {
                 med.price = p.price;
-                med.buyPrice = p.price;
+                updateStock(p.medId, undefined, p.price);
             }
-            if (p.expiry) med.expiryDate = p.expiry;
+            if (p.expiry) updateStock(p.medId, undefined, undefined, p.expiry);
         }
     });
     saveData();
-    saveMeds();
+    saveStock();
     purchaseItems = [];
     renderPurchases();
     renderInventory();
@@ -2541,12 +2539,11 @@ document.getElementById('confirmCancelInvoice').addEventListener('click', functi
     let invoice = appData.invoices.find(function(inv) { return inv.id === id; });
     if (!invoice) return;
     invoice.items.forEach(function(item) {
-        let med = medicinesDB.find(function(m) { return m.id === item.id; });
-        if (med) med.qty += item.qty;
+        adjustStock(item.id, item.qty);
     });
     invoice.status = '\u0645\u0644\u063A\u064A\u0629';
     saveData();
-    saveMeds();
+    saveStock();
     renderDashboard();
     renderReports();
     renderMedsGrid();
@@ -2562,10 +2559,10 @@ function renderDashboard() {
     let monthlySales = appData.invoices
         .filter(function(inv) { return isThisMonth(inv.date) && inv.status !== '\u0645\u0644\u063A\u064A\u0629'; })
         .reduce(function(sum, inv) { return sum + inv.net; }, 0);
-    let lowStock = medicinesDB.filter(function(m) { return m.qty > 0 && m.qty <= 10; }).length;
-    let outOfStock = medicinesDB.filter(function(m) { return m.qty <= 0; }).length;
+    let lowStock = medicinesDB.filter(function(m) { return getQty(m.id) > 0 && getQty(m.id) <= 10; }).length;
+    let outOfStock = medicinesDB.filter(function(m) { return getQty(m.id) <= 0; }).length;
     let expiringMeds = medicinesDB.filter(function(m) {
-        let days = getExpiryDays(m.expiryDate);
+        let days = getExpiryDays(getExpiryDate(m.id));
         return days !== null && days >= 0 && days <= 30;
     }).length;
 
@@ -2617,9 +2614,9 @@ function renderDashboard() {
 
     let expiryTbody = document.getElementById('expiryAlertBody');
     let expiryMeds = medicinesDB.filter(function(m) {
-        let days = getExpiryDays(m.expiryDate);
+        let days = getExpiryDays(getExpiryDate(m.id));
         return days !== null && days >= 0 && days <= 30;
-    }).sort(function(a, b) { return getExpiryDays(a.expiryDate) - getExpiryDays(b.expiryDate); });
+    }).sort(function(a, b) { return getExpiryDays(getExpiryDate(a.id)) - getExpiryDays(getExpiryDate(b.id)); });
     let expiryCount = document.getElementById('expiryAlertCount');
     if (expiryCount) expiryCount.textContent = expiryMeds.length;
     if (expiryTbody) {
@@ -2628,9 +2625,9 @@ function renderDashboard() {
         } else {
             expiryTbody.innerHTML = '';
             expiryMeds.forEach(function(m) {
-                let days = getExpiryDays(m.expiryDate);
+                let days = getExpiryDays(getExpiryDate(m.id));
                 let tr3 = document.createElement('tr');
-                tr3.innerHTML = '\n                    <td><strong>' + escapeHtml(m.name) + '</strong></td>\n                    <td>' + formatDateShort(m.expiryDate) + '</td>\n                    <td><span class="expiry-badge ' + (days <= 0 ? 'red' : 'yellow') + '">' + days + ' ' + getText('dash.day') + '</span></td>\n                    <td>' + m.qty + '</td>\n                ';
+                tr3.innerHTML = '\n                    <td><strong>' + escapeHtml(m.name) + '</strong></td>\n                    <td>' + formatDateShort(getExpiryDate(m.id)) + '</td>\n                    <td><span class="expiry-badge ' + (days <= 0 ? 'red' : 'yellow') + '">' + days + ' ' + getText('dash.day') + '</span></td>\n                    <td>' + getQty(m.id) + '</td>\n                ';
                 expiryTbody.appendChild(tr3);
             });
         }
@@ -2870,8 +2867,7 @@ function confirmReturn(invoiceId) {
         let item = invoice.items.find(function(i) { return i.id === medId; });
         if (item) {
             returnItems.push({ medId: medId, name: item.name, qty: qty, price: item.price, buyPrice: item.buyPrice || 0 });
-            let med = medicinesDB.find(function(m) { return m.id === medId; });
-            if (med) med.qty += qty;
+            adjustStock(medId, qty);
         }
     });
     if (returnItems.length === 0) { showToast(getText('returns.noItem'), 'error'); return; }
@@ -2887,7 +2883,7 @@ function confirmReturn(invoiceId) {
     });
     invoice.status = getInvoiceStatusText(invoice);
     saveData();
-    saveMeds();
+    saveStock();
     renderDashboard();
     renderReports();
     renderMedsGrid();
@@ -3097,7 +3093,7 @@ function exportInventoryCSV() {
     if (meds.length === 0) { showToast(getText('inventory.noExport'), 'warning'); return; }
     let csv = getText('inventory.csvHeader') + '\n';
     meds.forEach(function(m) {
-        csv += m.id + ',' + escapeHtmlCSV(m.name) + ',' + escapeHtmlCSV(m.scientificName) + ',' + escapeHtmlCSV(m.category) + ',' + m.price + ',' + m.qty + ',' + (m.expiryDate || '') + ',' + (m.barcode || '') + ',' + (m.rx ? getText('inventory.rxYes') : getText('inventory.rxNo')) + '\n';
+        csv += m.id + ',' + escapeHtmlCSV(m.name) + ',' + escapeHtmlCSV(m.scientificName) + ',' + escapeHtmlCSV(m.category) + ',' + m.price + ',' + getQty(m.id) + ',' + (getExpiryDate(m.id) || '') + ',' + (m.barcode || '') + ',' + (m.rx ? getText('inventory.rxYes') : getText('inventory.rxNo')) + '\n';
     });
     let blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     let url = URL.createObjectURL(blob);
@@ -3722,8 +3718,7 @@ function confirmPurchaseReturn() {
         var item = purchase.items.find(function(i) { return i.medId === medId; });
         if (item) {
             items.push({ medicineId: medId, name: item.name, qty: qty, price: item.price });
-            var med = medicinesDB.find(function(m) { return m.id === medId; });
-            if (med) med.qty = Math.max(0, med.qty - qty);
+            adjustStock(medId, -qty);
         }
     });
     if (items.length === 0) { showToast('اختر عنصراً واحداً على الأقل', 'error'); return; }
@@ -3740,7 +3735,7 @@ function confirmPurchaseReturn() {
         total: total
     });
     saveData();
-    saveMeds();
+    saveStock();
     document.getElementById('purchaseReturnModal').style.display = 'none';
     showToast('تم تسجيل مرتجع الشراء بنجاح', 'success');
     renderPurchases();
@@ -3887,7 +3882,7 @@ function renderUserSpecificUI() {
 // ===== BARCODE LABEL PRINTING =====
 function printBarcodeLabel(medId) {
     var meds = medId ? [getMedicineById(medId)] : medicinesDB;
-    meds = meds.filter(function(m) { return m && m.qty > 0; });
+    meds = meds.filter(function(m) { return m && getQty(m.id) > 0; });
     if (meds.length === 0) { showToast('لا توجد أدوية متاحة', 'warning'); return; }
     var w = window.open('', '_blank', 'width=600,height=800');
     var labelsHtml = '';
@@ -4244,7 +4239,7 @@ function showNewTransfer() {
         toSelect.innerHTML += '<option value="' + w.id + '">' + escapeHtml(w.name) + '</option>';
     });
     medicinesDB.forEach(function(m) {
-        medSelect.innerHTML += '<option value="' + m.id + '">' + escapeHtml(m.name) + ' (متوفر: ' + m.qty + ')</option>';
+        medSelect.innerHTML += '<option value="' + m.id + '">' + escapeHtml(m.name) + ' (متوفر: ' + getQty(m.id) + ')</option>';
     });
     document.getElementById('transferQty').value = 1;
     modal.style.display = 'block';
@@ -4259,7 +4254,7 @@ function saveTransfer() {
     if (qty <= 0) { showToast('الرجاء إدخال كمية صحيحة', 'warning'); return; }
     var med = getMedicineById(medId);
     if (!med) { showToast('الدواء غير موجود', 'error'); return; }
-    if (med.qty < qty) { showToast('الكمية غير متوفرة في المخزون الكلي', 'error'); return; }
+    if (getQty(med.id) < qty) { showToast('الكمية غير متوفرة في المخزون الكلي', 'error'); return; }
     if (!appData.nextWarehouseTransferId) appData.nextWarehouseTransferId = 1;
     if (!appData.warehouseTransfers) appData.warehouseTransfers = [];
     if (!appData.medicineWarehouses) appData.medicineWarehouses = {};
@@ -4335,7 +4330,7 @@ function addPOItemRow() {
     select.style.cssText = 'flex:1;';
     select.innerHTML = '<option value="">اختر دواء</option>';
     medicinesDB.forEach(function(m) {
-        select.innerHTML += '<option value="' + m.id + '">' + escapeHtml(m.name) + ' (' + m.qty + ')</option>';
+        select.innerHTML += '<option value="' + m.id + '">' + escapeHtml(m.name) + ' (' + getQty(m.id) + ')</option>';
     });
     var qtyInput = document.createElement('input');
     qtyInput.type = 'number';
@@ -4420,12 +4415,11 @@ function receivePO(id) {
     var po = (appData.purchaseOrders || []).find(function(p) { return p.id === id; });
     if (!po) return;
     (po.items || []).forEach(function(item) {
-        var med = getMedicineById(item.medicineId);
-        if (med) med.qty = (med.qty || 0) + item.qty;
+        adjustStock(item.medicineId, item.qty);
     });
     po.status = 'مستلم';
     saveData();
-    saveMeds();
+    saveStock();
     renderPurchaseOrders();
     showToast('تم استلام الأمر رقم #' + po.id, 'success');
     audit('po_receive', 'استلام أمر شراء #' + po.id);
@@ -4676,17 +4670,17 @@ function quickLogin() {
 function renderBatchInfo(medicineId) {
     var med = getMedicineById(medicineId);
     if (!med) return '';
-    return '<small style="color:#64748b;">الباتش: ' + escapeHtml(med.batchNumber || '-') + ' | الصلاحية: ' + (med.expiryDate || '-') + '</small>';
+    return '<small style="color:#64748b;">الباتش: ' + escapeHtml(getBatchNumber(medicineId) || '-') + ' | الصلاحية: ' + (getExpiryDate(medicineId) || '-') + '</small>';
 }
 
 // ======================================================================
 // FEATURE 9: Reorder Point Alerts
 // ======================================================================
 function checkReorderAlerts() {
-    var lowMeds = medicinesDB.filter(function(m) { return m.reorderPoint && m.qty <= m.reorderPoint; });
+    var lowMeds = medicinesDB.filter(function(m) { var s = getStock(m.id); return s.rp && getQty(m.id) <= s.rp; });
     if (lowMeds.length > 0 && lowMeds.length <= 5) {
         lowMeds.forEach(function(m) {
-            showToast('تنبيه: ' + escapeHtml(m.name) + ' وصل لنقطة إعادة الطلب (' + m.qty + ' / ' + m.reorderPoint + ')', 'warning');
+            showToast('تنبيه: ' + escapeHtml(m.name) + ' وصل لنقطة إعادة الطلب (' + getQty(m.id) + ' / ' + getStock(m.id).rp + ')', 'warning');
         });
     }
 }
@@ -4773,8 +4767,8 @@ function renderSystemHealth() {
     var panel = document.getElementById('systemHealthPanel');
     if (!panel) return;
     var dbSize = new Blob([JSON.stringify(appData)]).size;
-    var medsSize = new Blob([JSON.stringify(medicinesDB)]).size;
-    var totalSize = dbSize + medsSize;
+    var stockSize = new Blob([JSON.stringify(medStock)]).size;
+    var totalSize = dbSize + stockSize;
     var sizeStr = totalSize > 1048576 ? (totalSize / 1048576).toFixed(1) + ' MB' : totalSize > 1024 ? (totalSize / 1024).toFixed(1) + ' KB' : totalSize + ' B';
     var invCount = (appData.invoices || []).length;
     var medCount = medicinesDB.length;
@@ -4784,9 +4778,9 @@ function renderSystemHealth() {
     var issues = [];
     if (medCount === 0) { healthScore -= 15; issues.push('لا توجد أدوية في قاعدة البيانات'); }
     if (invCount === 0) { healthScore -= 5; issues.push('لا توجد فواتير'); }
-    var expCount = medicinesDB.filter(function(m) { var d = getExpiryDays(m.expiryDate); return d !== null && d >= 0 && d <= 7; }).length;
+    var expCount = medicinesDB.filter(function(m) { var d = getExpiryDays(getExpiryDate(m.id)); return d !== null && d >= 0 && d <= 7; }).length;
     if (expCount > 0) { healthScore -= expCount * 2; issues.push(expCount + ' دواء منتهي الصلاحية'); }
-    var lowCount = medicinesDB.filter(function(m) { return m.qty <= 10 && m.qty > 0; }).length;
+    var lowCount = medicinesDB.filter(function(m) { return getQty(m.id) <= 10 && getQty(m.id) > 0; }).length;
     if (lowCount > 5) { healthScore -= 10; issues.push(lowCount + ' دواء منخفض المخزون'); }
     healthScore = Math.max(0, healthScore);
     var healthColor = healthScore >= 80 ? '#10b981' : healthScore >= 50 ? '#f59e0b' : '#ef4444';
@@ -4881,20 +4875,20 @@ function doImport() {
                 var nextId = medicinesDB.length > 0 ? Math.max.apply(Math, medicinesDB.map(function(m) { return m.id; })) + 1 : 1;
                 var existing = medicinesDB.find(function(m) { return m.barcode === cols[0] || m.name === cols[1]; });
                 if (existing) {
-                    existing.qty = (existing.qty || 0) + (parseInt(cols[3]) || 0);
+                    adjustStock(existing.id, parseInt(cols[3]) || 0);
                     existing.price = parseFloat(cols[4]) || existing.price;
                 } else {
                     medicinesDB.push({
                         id: nextId, name: cols[1] || cols[0], scientificName: cols[2] || '',
                         category: cols[5] || 'عام', price: parseFloat(cols[4]) || 0,
-                        buyPrice: parseFloat(cols[6]) || 0, qty: parseInt(cols[3]) || 0,
-                        expiryDate: cols[7] || '', barcode: cols[0] || '',
-                        rx: cols[8] === 'rx' || cols[8] === 'true', schedule: cols[9] || 'normal',
-                        reorderPoint: parseInt(cols[10]) || 0, batchNumber: cols[11] || ''
+                        barcode: cols[0] || '',
+                        rx: cols[8] === 'rx' || cols[8] === 'true', schedule: cols[9] || 'normal'
                     });
+                    updateStock(nextId, parseInt(cols[3]) || 0, parseFloat(cols[6]) || 0, cols[7] || '');
+                    setStock(nextId, { rp: parseInt(cols[10]) || 0, bn: cols[11] || '' });
                 }
             }
-            saveMeds();
+            saveStock();
             showToast('تم استيراد الأدوية بنجاح', 'success');
         } else if (type === 'customers') {
             var lines = text.split('\n').filter(function(l) { return l.trim(); });
@@ -5062,7 +5056,7 @@ function addCompoundIngredient() {
     select.style.cssText = 'flex:1;';
     select.innerHTML = '<option value="">اختر دواء</option>';
     medicinesDB.forEach(function(m) {
-        select.innerHTML += '<option value="' + m.id + '">' + escapeHtml(m.name) + ' (متوفر: ' + m.qty + ')</option>';
+        select.innerHTML += '<option value="' + m.id + '">' + escapeHtml(m.name) + ' (متوفر: ' + getQty(m.id) + ')</option>';
     });
     var qtyInput = document.createElement('input');
     qtyInput.type = 'number';
@@ -5097,7 +5091,7 @@ function saveCompound() {
         var qty = parseInt(inp.value) || 0;
         if (!medId || qty <= 0) return;
         var med = getMedicineById(medId);
-        var cost = med ? (med.buyPrice || med.price || 0) * qty : 0;
+        var cost = med ? (getBuyPrice(med.id) || med.price || 0) * qty : 0;
         ingredients.push({ medicineId: medId, medicineName: med ? med.name : '', qty: qty, cost: cost });
         totalCost += cost;
     });
@@ -5134,12 +5128,11 @@ function sellCompound(id) {
     var canMake = true;
     (c.ingredients || []).forEach(function(ing) {
         var med = getMedicineById(ing.medicineId);
-        if (!med || med.qty < ing.qty) canMake = false;
+        if (!med || getQty(med.id) < ing.qty) canMake = false;
     });
     if (!canMake) { showToast('المكونات غير كافية لتحضير هذه التركيبة', 'error'); return; }
     (c.ingredients || []).forEach(function(ing) {
-        var med = getMedicineById(ing.medicineId);
-        if (med) med.qty = Math.max(0, med.qty - ing.qty);
+        adjustStock(ing.medicineId, -ing.qty);
     });
     var invoice = {
         id: appData.nextInvoiceId++,
@@ -5150,7 +5143,7 @@ function sellCompound(id) {
     };
     appData.invoices.push(invoice);
     saveData();
-    saveMeds();
+    saveStock();
     renderCompounds();
     showToast('تم بيع التركيبة ' + escapeHtml(c.name), 'success');
     audit('compound_sale', 'بيع تركيبة: ' + c.name + ' بقيمة ' + formatPrice(c.price));

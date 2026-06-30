@@ -922,6 +922,182 @@
                 </div>
             </section>
         </main>
+
+    <!-- ===== صفحة المستودعات ===== -->
+    <section class="page" id="page-warehouses">
+        <div class="page-header">
+            <h1>&#x1F3E2; <span data-i18n="wh.title">المستودعات</span></h1>
+            <p data-i18n="wh.subtitle">إدارة المخازن والمستودعات</p>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddWarehouse()"><i class="fas fa-plus"></i> <span data-i18n="wh.add">إضافة مستودع</span></button>
+            <button class="btn btn-info" onclick="showNewTransfer()"><i class="fas fa-exchange-alt"></i> <span data-i18n="wh.transfer">تحويل مخزون</span></button>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3 data-i18n="wh.list">قائمة المستودعات</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>#</th><th data-i18n="common.name">الاسم</th><th data-i18n="wh.thLocation">الموقع</th><th data-i18n="wh.thItems">عدد الأصناف</th><th data-i18n="common.actions">الإجراءات</th></tr></thead>
+                    <tbody id="warehouseBody"></tbody>
+                </table>
+                <div id="warehousePagination" class="pagination"></div>
+            </div>
+        </div>
+        <div class="card" style="margin-top:12px;">
+            <div class="card-header"><h3>&#x1F504; <span data-i18n="wh.transferLog">سجل تحويلات المخزون</span></h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>#</th><th data-i18n="wh.thFrom">من</th><th data-i18n="wh.thTo">إلى</th><th data-i18n="common.name">الدواء</th><th data-i18n="common.qty">الكمية</th><th data-i18n="common.status">الحالة</th><th data-i18n="common.date">التاريخ</th></tr></thead>
+                    <tbody id="transferBody"></tbody>
+                </table>
+                <div id="transferPagination" class="pagination"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== صفحة أوامر الشراء ===== -->
+    <section class="page" id="page-po">
+        <div class="page-header">
+            <h1>&#x1F4E6; <span data-i18n="po.title">أوامر الشراء</span></h1>
+            <p data-i18n="po.subtitle">إدارة طلبات الشراء للموردين</p>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddPO()"><i class="fas fa-plus"></i> <span data-i18n="po.add">أمر شراء جديد</span></button>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3 data-i18n="po.list">قائمة أوامر الشراء</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>#</th><th data-i18n="po.thSupplier">المورد</th><th data-i18n="common.items">الأصناف</th><th data-i18n="common.total">الإجمالي</th><th data-i18n="common.status">الحالة</th><th data-i18n="common.date">التاريخ</th><th data-i18n="common.actions">الإجراءات</th></tr></thead>
+                    <tbody id="poBody"></tbody>
+                </table>
+                <div id="poPagination" class="pagination"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== صفحة الأطباء ===== -->
+    <section class="page" id="page-doctors">
+        <div class="page-header">
+            <h1>&#x1FA7A; <span data-i18n="doc.title">الأطباء</span></h1>
+            <p data-i18n="doc.subtitle">إدارة سجل الأطباء والوصفات</p>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddDoctor()"><i class="fas fa-plus"></i> <span data-i18n="doc.add">إضافة طبيب</span></button>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3 data-i18n="doc.list">قائمة الأطباء</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>#</th><th data-i18n="common.name">الاسم</th><th data-i18n="doc.thSpecialty">التخصص</th><th data-i18n="common.phone">الهاتف</th><th data-i18n="common.items">الوصفات</th><th data-i18n="common.actions">الإجراءات</th></tr></thead>
+                    <tbody id="doctorBody"></tbody>
+                </table>
+                <div id="doctorPagination" class="pagination"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== صفحة الولاء والمكافآت ===== -->
+    <section class="page" id="page-loyalty">
+        <div class="page-header">
+            <h1>&#x1F3C6; <span data-i18n="loyalty.title">الولاء والمكافآت</span></h1>
+            <p data-i18n="loyalty.subtitle">نظام نقاط ولاء العملاء</p>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>&#x1F4CA; <span data-i18n="loyalty.ranking">ترتيب النقاط</span></h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th data-i18n="common.name">العميل</th><th data-i18n="common.amount">النقاط</th><th data-i18n="common.status">المستوى</th><th data-i18n="common.discount">الخصم</th><th data-i18n="common.actions">الإجراءات</th></tr></thead>
+                    <tbody id="loyaltyBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== صفحة بطاقات الهدايا ===== -->
+    <section class="page" id="page-giftcards">
+        <div class="page-header">
+            <h1>&#x1F381; <span data-i18n="gc.title">بطاقات الهدايا</span></h1>
+            <p data-i18n="gc.subtitle">إدارة بطاقات الهدايا والرصيد</p>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddGiftCard()"><i class="fas fa-plus"></i> <span data-i18n="gc.add">إضافة بطاقة</span></button>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3 data-i18n="gc.list">قائمة البطاقات</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>#</th><th>الكود</th><th>الرصيد</th><th>تاريخ الانتهاء</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+                    <tbody id="giftCardBody"></tbody>
+                </table>
+                <div id="giftCardPagination" class="pagination"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== صفحة كوبونات الخصم ===== -->
+    <section class="page" id="page-coupons">
+        <div class="page-header">
+            <h1>&#x1F4B3; <span data-i18n="coupon.title">كوبونات الخصم</span></h1>
+            <p data-i18n="coupon.subtitle">إدارة كوبونات وقسائم الخصم</p>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddCoupon()"><i class="fas fa-plus"></i> <span data-i18n="coupon.add">إضافة كوبون</span></button>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3 data-i18n="coupon.list">قائمة الكوبونات</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>#</th><th>الكود</th><th>الخصم</th><th>الحد الأدنى</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+                    <tbody id="couponBody"></tbody>
+                </table>
+                <div id="couponPagination" class="pagination"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== صفحة التركيبات ===== -->
+    <section class="page" id="page-compounds">
+        <div class="page-header">
+            <h1>&#x2697;&#xFE0F; <span data-i18n="compound.title">التركيبات</span></h1>
+            <p data-i18n="compound.subtitle">تركيبات الأدوية الجاهزة</p>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddCompound()"><i class="fas fa-plus"></i> <span data-i18n="compound.add">إضافة تركيبة</span></button>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3 data-i18n="compound.list">قائمة التركيبات</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>#</th><th>الاسم</th><th>المكونات</th><th>التكلفة</th><th>الإجراءات</th></tr></thead>
+                    <tbody id="compoundBody"></tbody>
+                </table>
+                <div id="compoundPagination" class="pagination"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== صفحة أهداف المبيعات ===== -->
+    <section class="page" id="page-targets">
+        <div class="page-header">
+            <h1>&#x1F3AF; <span data-i18n="target.title">أهداف المبيعات</span></h1>
+            <p data-i18n="target.subtitle">تحديد ومتابعة أهداف المبيعات الشهرية</p>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddTarget()"><i class="fas fa-plus"></i> <span data-i18n="target.add">إضافة هدف</span></button>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3 data-i18n="target.list">قائمة الأهداف</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>الشهر</th><th>الهدف</th><th>المحقق</th><th>التقدم</th><th>الإجراءات</th></tr></thead>
+                    <tbody id="targetBody"></tbody>
+                </table>
+                <div id="targetPagination" class="pagination"></div>
+            </div>
+        </div>
+    </section>
+
     </div>
 
     <!-- ===== المودالات (Modal) ===== -->
@@ -1780,181 +1956,6 @@
         </div>
     </div>
 
-    <!-- ===== صفحة المستودعات ===== -->
-    <section class="page" id="page-warehouses">
-        <div class="page-header">
-            <h1>&#x1F3E2; <span data-i18n="wh.title">المستودعات</span></h1>
-            <p data-i18n="wh.subtitle">إدارة المخازن والمستودعات</p>
-        </div>
-        <div class="action-bar">
-            <button class="btn btn-primary" onclick="showAddWarehouse()"><i class="fas fa-plus"></i> <span data-i18n="wh.add">إضافة مستودع</span></button>
-            <button class="btn btn-info" onclick="showNewTransfer()"><i class="fas fa-exchange-alt"></i> <span data-i18n="wh.transfer">تحويل مخزون</span></button>
-        </div>
-        <div class="card">
-            <div class="card-header"><h3 data-i18n="wh.list">قائمة المستودعات</h3></div>
-            <div class="card-body">
-                <table class="table">
-                    <thead><tr><th>#</th><th data-i18n="common.name">الاسم</th><th data-i18n="wh.thLocation">الموقع</th><th data-i18n="wh.thItems">عدد الأصناف</th><th data-i18n="common.actions">الإجراءات</th></tr></thead>
-                    <tbody id="warehouseBody"></tbody>
-                </table>
-                <div id="warehousePagination" class="pagination"></div>
-            </div>
-        </div>
-        <div class="card" style="margin-top:12px;">
-            <div class="card-header"><h3>&#x1F504; <span data-i18n="wh.transferLog">سجل تحويلات المخزون</span></h3></div>
-            <div class="card-body">
-                <table class="table">
-                    <thead><tr><th>#</th><th data-i18n="wh.thFrom">من</th><th data-i18n="wh.thTo">إلى</th><th data-i18n="common.name">الدواء</th><th data-i18n="common.qty">الكمية</th><th data-i18n="common.status">الحالة</th><th data-i18n="common.date">التاريخ</th></tr></thead>
-                    <tbody id="transferBody"></tbody>
-                </table>
-                <div id="transferPagination" class="pagination"></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ===== صفحة أوامر الشراء ===== -->
-    <section class="page" id="page-po">
-        <div class="page-header">
-            <h1>&#x1F4E6; <span data-i18n="po.title">أوامر الشراء</span></h1>
-            <p data-i18n="po.subtitle">إدارة طلبات الشراء للموردين</p>
-        </div>
-        <div class="action-bar">
-            <button class="btn btn-primary" onclick="showAddPO()"><i class="fas fa-plus"></i> <span data-i18n="po.add">أمر شراء جديد</span></button>
-        </div>
-        <div class="card">
-            <div class="card-header"><h3 data-i18n="po.list">قائمة أوامر الشراء</h3></div>
-            <div class="card-body">
-                <table class="table">
-                    <thead><tr><th>#</th><th data-i18n="po.thSupplier">المورد</th><th data-i18n="common.items">الأصناف</th><th data-i18n="common.total">الإجمالي</th><th data-i18n="common.status">الحالة</th><th data-i18n="common.date">التاريخ</th><th data-i18n="common.actions">الإجراءات</th></tr></thead>
-                    <tbody id="poBody"></tbody>
-                </table>
-                <div id="poPagination" class="pagination"></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ===== صفحة الأطباء ===== -->
-    <section class="page" id="page-doctors">
-        <div class="page-header">
-            <h1>&#x1FA7A; <span data-i18n="doc.title">الأطباء</span></h1>
-            <p data-i18n="doc.subtitle">إدارة سجل الأطباء والوصفات</p>
-        </div>
-        <div class="action-bar">
-            <button class="btn btn-primary" onclick="showAddDoctor()"><i class="fas fa-plus"></i> <span data-i18n="doc.add">إضافة طبيب</span></button>
-        </div>
-        <div class="card">
-            <div class="card-header"><h3 data-i18n="doc.list">قائمة الأطباء</h3></div>
-            <div class="card-body">
-                <table class="table">
-                    <thead><tr><th>#</th><th data-i18n="common.name">الاسم</th><th data-i18n="doc.thSpecialty">التخصص</th><th data-i18n="common.phone">الهاتف</th><th data-i18n="common.items">الوصفات</th><th data-i18n="common.actions">الإجراءات</th></tr></thead>
-                    <tbody id="doctorBody"></tbody>
-                </table>
-                <div id="doctorPagination" class="pagination"></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ===== صفحة الولاء والمكافآت ===== -->
-    <section class="page" id="page-loyalty">
-        <div class="page-header">
-            <h1>&#x1F3C6; <span data-i18n="loyalty.title">الولاء والمكافآت</span></h1>
-            <p data-i18n="loyalty.subtitle">نظام نقاط ولاء العملاء</p>
-        </div>
-        <div class="card">
-            <div class="card-header"><h3>&#x1F4CA; <span data-i18n="loyalty.ranking">ترتيب النقاط</span></h3></div>
-            <div class="card-body">
-                <table class="table">
-                    <thead><tr><th data-i18n="common.name">العميل</th><th data-i18n="common.amount">النقاط</th><th data-i18n="common.status">المستوى</th><th data-i18n="common.discount">الخصم</th><th data-i18n="common.actions">الإجراءات</th></tr></thead>
-                    <tbody id="loyaltyBody"></tbody>
-                </table>
-            </div>
-        </div>
-    </section>
-
-    <!-- ===== صفحة بطاقات الهدايا ===== -->
-    <section class="page" id="page-giftcards">
-        <div class="page-header">
-            <h1>&#x1F381; <span data-i18n="gc.title">بطاقات الهدايا</span></h1>
-            <p data-i18n="gc.subtitle">إدارة بطاقات الهدايا والرصيد</p>
-        </div>
-        <div class="action-bar">
-            <button class="btn btn-primary" onclick="showAddGiftCard()"><i class="fas fa-plus"></i> <span data-i18n="gc.add">إضافة بطاقة</span></button>
-        </div>
-        <div class="card">
-            <div class="card-header"><h3 data-i18n="gc.list">قائمة البطاقات</h3></div>
-            <div class="card-body">
-                <table class="table">
-                    <thead><tr><th>#</th><th>الكود</th><th>الرصيد</th><th>تاريخ الانتهاء</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
-                    <tbody id="giftCardBody"></tbody>
-                </table>
-                <div id="giftCardPagination" class="pagination"></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ===== صفحة كوبونات الخصم ===== -->
-    <section class="page" id="page-coupons">
-        <div class="page-header">
-            <h1>&#x1F4B3; <span data-i18n="coupon.title">كوبونات الخصم</span></h1>
-            <p data-i18n="coupon.subtitle">إدارة كوبونات وقسائم الخصم</p>
-        </div>
-        <div class="action-bar">
-            <button class="btn btn-primary" onclick="showAddCoupon()"><i class="fas fa-plus"></i> <span data-i18n="coupon.add">إضافة كوبون</span></button>
-        </div>
-        <div class="card">
-            <div class="card-header"><h3 data-i18n="coupon.list">قائمة الكوبونات</h3></div>
-            <div class="card-body">
-                <table class="table">
-                    <thead><tr><th>#</th><th>الكود</th><th>الخصم</th><th>الحد الأدنى</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
-                    <tbody id="couponBody"></tbody>
-                </table>
-                <div id="couponPagination" class="pagination"></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ===== صفحة التركيبات ===== -->
-    <section class="page" id="page-compounds">
-        <div class="page-header">
-            <h1>&#x2697;&#xFE0F; <span data-i18n="compound.title">التركيبات</span></h1>
-            <p data-i18n="compound.subtitle">تركيبات الأدوية الجاهزة</p>
-        </div>
-        <div class="action-bar">
-            <button class="btn btn-primary" onclick="showAddCompound()"><i class="fas fa-plus"></i> <span data-i18n="compound.add">إضافة تركيبة</span></button>
-        </div>
-        <div class="card">
-            <div class="card-header"><h3 data-i18n="compound.list">قائمة التركيبات</h3></div>
-            <div class="card-body">
-                <table class="table">
-                    <thead><tr><th>#</th><th>الاسم</th><th>المكونات</th><th>التكلفة</th><th>الإجراءات</th></tr></thead>
-                    <tbody id="compoundBody"></tbody>
-                </table>
-                <div id="compoundPagination" class="pagination"></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ===== صفحة أهداف المبيعات ===== -->
-    <section class="page" id="page-targets">
-        <div class="page-header">
-            <h1>&#x1F3AF; <span data-i18n="target.title">أهداف المبيعات</span></h1>
-            <p data-i18n="target.subtitle">تحديد ومتابعة أهداف المبيعات الشهرية</p>
-        </div>
-        <div class="action-bar">
-            <button class="btn btn-primary" onclick="showAddTarget()"><i class="fas fa-plus"></i> <span data-i18n="target.add">إضافة هدف</span></button>
-        </div>
-        <div class="card">
-            <div class="card-header"><h3 data-i18n="target.list">قائمة الأهداف</h3></div>
-            <div class="card-body">
-                <table class="table">
-                    <thead><tr><th>الشهر</th><th>الهدف</th><th>المحقق</th><th>التقدم</th><th>الإجراءات</th></tr></thead>
-                    <tbody id="targetBody"></tbody>
-                </table>
-                <div id="targetPagination" class="pagination"></div>
-            </div>
-        </div>
-    </section>
-
     <!-- ====== شاشة تسجيل الدخول ====== -->
     <div class="auth-overlay" id="authOverlay" style="display:flex;">
         <div class="auth-box">
@@ -2003,6 +2004,7 @@
     </div>
 
     <script src="js/medicines.js"></script>
+    <script src="js/stock.js"></script>
     <script src="js/api.js"></script>
     <script src="js/app.js"></script>
 
