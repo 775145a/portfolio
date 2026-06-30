@@ -84,6 +84,38 @@
                     <span class="nav-icon">&#x1F3E5;</span>
                     <span>التأمين الصحي</span>
                 </a>
+                <a href="#" class="nav-item" data-page="warehouses">
+                    <span class="nav-icon">&#x1F3E2;</span>
+                    <span>المستودعات</span>
+                </a>
+                <a href="#" class="nav-item" data-page="po">
+                    <span class="nav-icon">&#x1F4E6;</span>
+                    <span>أوامر الشراء</span>
+                </a>
+                <a href="#" class="nav-item" data-page="doctors">
+                    <span class="nav-icon">&#x1FA7A;</span>
+                    <span>الأطباء</span>
+                </a>
+                <a href="#" class="nav-item" data-page="loyalty">
+                    <span class="nav-icon">&#x1F3C6;</span>
+                    <span>الولاء والمكافآت</span>
+                </a>
+                <a href="#" class="nav-item" data-page="giftcards">
+                    <span class="nav-icon">&#x1F381;</span>
+                    <span>بطاقات الهدايا</span>
+                </a>
+                <a href="#" class="nav-item" data-page="coupons">
+                    <span class="nav-icon">&#x1F4B3;</span>
+                    <span>كوبونات الخصم</span>
+                </a>
+                <a href="#" class="nav-item" data-page="compounds">
+                    <span class="nav-icon">&#x2697;&#xFE0F;</span>
+                    <span>التركيبات</span>
+                </a>
+                <a href="#" class="nav-item" data-page="targets">
+                    <span class="nav-icon">&#x1F3AF;</span>
+                    <span>أهداف المبيعات</span>
+                </a>
                 <a href="#" class="nav-item" data-page="settings">
                     <span class="nav-icon">&#x2699;&#xFE0F;</span>
                     <span>الإعدادات</span>
@@ -114,8 +146,15 @@
                         <i class="fas fa-moon"></i>
                     </button>
                     <div class="user-avatar" id="headerAvatar">أ</div>
+                    <button id="langToggleBtn" class="btn btn-sm btn-primary" onclick="toggleLang()" style="background:var(--primary);color:#fff;padding:6px 14px;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;transition:all .3s;white-space:nowrap;">English</button>
                 </div>
             </header>
+
+            <!-- ===== Announcement Banner ===== -->
+            <div id="announcementBanner" style="display:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;padding:10px 20px;font-size:14px;font-weight:500;justify-content:space-between;align-items:center;">
+                <span></span>
+                <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;">&times;</button>
+            </div>
 
             <!-- ===== صفحة لوحة التحكم ===== -->
             <section class="page active" id="page-dashboard">
@@ -191,6 +230,34 @@
                     <div class="card-body" id="parkedSalesList">
                         <p class="text-center empty-state">لا توجد فواتير معلقة</p>
                     </div>
+                </div>
+                <!-- Dashboard Widgets (toggleable) -->
+                <div class="dashboard-widgets-grid">
+                    <div class="card" id="targetProgressWidget">
+                        <div class="card-header"><h3>&#x1F3AF; التقدم نحو الهدف الشهري</h3></div>
+                        <div class="card-body">
+                            <div class="progress-bar" style="direction:ltr;height:24px;border-radius:12px;">
+                                <div class="progress-fill" id="targetProgressFill" style="width:0%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:12px;transition:width 0.5s ease;"></div>
+                            </div>
+                            <p style="margin-top:8px;text-align:center;font-weight:600;" id="targetProgressText">0%</p>
+                        </div>
+                    </div>
+                    <div class="card" id="doctorRxWidget">
+                        <div class="card-header"><h3>&#x1F4CB; آخر الوصفات الطبية</h3></div>
+                        <div class="card-body" style="max-height:200px;overflow-y:auto;">
+                            <table class="table">
+                                <thead><tr><th>#</th><th>الطبيب</th><th>التاريخ</th></tr></thead>
+                                <tbody id="rxWidgetBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <!-- System Health Panel -->
+                <div class="card" style="margin-top:12px;" id="systemHealthWidget">
+                    <div class="card-header">
+                        <h3>&#x1F4CA; صحة النظام</h3>
+                    </div>
+                    <div class="card-body" id="systemHealthPanel"></div>
                 </div>
             </section>
 
@@ -273,6 +340,14 @@
                             <div class="cart-row">
                                 <span>الخصم:</span>
                                 <input type="number" id="discountInput" class="form-input discount-input" value="0" min="0">
+                            </div>
+                            <div class="cart-row">
+                                <span>كود الكوبون:</span>
+                                <input type="text" id="couponCodeInput" class="form-input" placeholder="كود الخصم" style="width:120px;">
+                            </div>
+                            <div class="cart-row">
+                                <span>بطاقة هدايا:</span>
+                                <input type="text" id="giftCardCodeInput" class="form-input" placeholder="كود البطاقة" style="width:120px;">
                             </div>
                             <div class="cart-row final">
                                 <span>الصافي:</span>
@@ -723,6 +798,108 @@
                         </div>
                     </div>
                     <div class="card">
+                        <div class="card-header"><h3>&#x1F4CB; تخصيص الفاتورة</h3></div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>رأس الفاتورة</label>
+                                <input type="text" id="receiptHeader" class="form-input" placeholder="رأس الفاتورة">
+                            </div>
+                            <div class="form-group">
+                                <label>حجم الورق</label>
+                                <select id="receiptPaperSize" class="form-select">
+                                    <option value="58mm">58 مم</option>
+                                    <option value="80mm">80 مم</option>
+                                    <option value="A4">A4</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="display:flex;gap:12px;flex-wrap:wrap;">
+                                <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="receiptShowLogo"> إظهار الشعار</label>
+                                <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="receiptShowTax"> إظهار الضريبة</label>
+                                <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="receiptShowPoints"> إظهار النقاط</label>
+                            </div>
+                            <button class="btn btn-primary" onclick="saveReceiptSettings()">حفظ إعدادات الفاتورة</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>&#x1F3C6; مستويات الولاء</h3></div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>نقاط لكل 10 ج.م</label>
+                                <input type="number" id="loyaltyRate" class="form-input" min="1" value="1">
+                            </div>
+                            <div class="form-group">
+                                <label>قيمة الاستبدال (كل X نقطة)</label>
+                                <input type="number" id="loyaltyRedeemRate" class="form-input" min="1" value="100">
+                            </div>
+                            <div id="loyaltyTierSettings"></div>
+                            <button class="btn btn-sm btn-secondary" onclick="addTier()">+ إضافة مستوى</button>
+                            <button class="btn btn-primary btn-block" onclick="saveLoyaltyTiers()" style="margin-top:8px;">حفظ مستويات الولاء</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>&#x1F4CA; تخصيص لوحة التحكم</h3></div>
+                        <div class="card-body">
+                            <div style="display:grid;gap:8px;">
+                                <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="widgetRecentSales" checked> آخر المبيعات</label>
+                                <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="widgetTopMeds" checked> أفضل الأدوية مبيعاً</label>
+                                <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="widgetExpiryAlerts" checked> تنبيهات الصلاحية</label>
+                                <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="widgetLowStock" checked> المخزون المنخفض</label>
+                                <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="widgetTodayStats" checked> إحصائيات اليوم</label>
+                                <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="widgetProfitChart"> الرسم البياني للأرباح</label>
+                                <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="widgetTargetProgress"> التقدم نحو الهدف</label>
+                                <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="widgetDoctorRx"> وصفات الأطباء</label>
+                            </div>
+                            <button class="btn btn-primary btn-block" onclick="saveWidgetSettings()" style="margin-top:8px;">حفظ الإعدادات</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>&#x1F4B1; العملات</h3></div>
+                        <div class="card-body">
+                            <button class="btn btn-primary btn-block" onclick="showAddCurrency()">+ إضافة عملة</button>
+                            <div style="margin-top:10px;">
+                                <table class="table">
+                                    <thead><tr><th>الكود</th><th>العملة</th><th>سعر الصرف</th><th>الإجراءات</th></tr></thead>
+                                    <tbody id="currencyBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>&#x1F4E2; الإعلانات</h3></div>
+                        <div class="card-body">
+                            <button class="btn btn-primary btn-block" onclick="showAddAnnouncement()">+ إضافة إعلان</button>
+                            <div id="announcementsContainer" style="margin-top:10px;"></div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>&#x1F4B2; أسعار الموردين</h3></div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>تصفية حسب المورد</label>
+                                <select id="spSupplierFilter" class="form-select" onchange="renderSupplierPrices()">
+                                    <option value="">الكل</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary btn-block" onclick="showAddSupplierPrice()">+ إضافة سعر</button>
+                            <div style="margin-top:10px;max-height:200px;overflow:auto;">
+                                <table class="table">
+                                    <thead><tr><th>المورد</th><th>الدواء</th><th>السعر</th><th>التاريخ</th><th>الإجراءات</th></tr></thead>
+                                    <tbody id="supplierPriceBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>&#x1F3E2; الأدوات</h3></div>
+                        <div class="card-body">
+                            <button class="btn btn-info btn-block" id="touchModeBtn" onclick="toggleTouchMode()"><i class="fas fa-hand-pointer"></i> تفعيل وضع اللمس</button>
+                            <button class="btn btn-info btn-block" onclick="showImportModal()"><i class="fas fa-file-import"></i> استيراد CSV</button>
+                            <button class="btn btn-warning btn-block" onclick="showArchiveModal()"><i class="fas fa-archive"></i> أرشفة الفواتير القديمة</button>
+                            <button class="btn btn-danger btn-block" onclick="showPurgeModal()"><i class="fas fa-trash-alt"></i> مسح جميع البيانات</button>
+                            <button class="btn btn-secondary btn-block" onclick="showQuickLogin()"><i class="fas fa-key"></i> تسجيل دخول سريع (PIN)</button>
+                        </div>
+                    </div>
+                    <div class="card">
                         <div class="card-header"><h3>البيانات والنسخ الاحتياطي</h3></div>
                         <div class="card-body">
                             <button class="btn btn-warning btn-block" onclick="resetData()">&#x1F5D1; مسح جميع البيانات</button>
@@ -740,52 +917,6 @@
                                     <tbody id="insuranceClaimsBody"></tbody>
                                 </table>
                             </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="settings-grid">
-                    <div class="card">
-                        <div class="card-header"><h3>معلومات الصيدلية</h3></div>
-                        <div class="card-body">
-                            <div class="form-group">
-                                <label>اسم الصيدلية</label>
-                                <input type="text" id="pharmacyName" class="form-input" value="ValoPOS">
-                            </div>
-                            <div class="form-group">
-                                <label>العنوان</label>
-                                <input type="text" id="pharmacyAddress" class="form-input">
-                            </div>
-                            <div class="form-group">
-                                <label>رقم التليفون</label>
-                                <input type="text" id="pharmacyPhone" class="form-input">
-                            </div>
-                            <div class="form-group">
-                                <label>تذييل الفاتورة</label>
-                                <textarea id="receiptFooter" class="form-input" rows="2" placeholder="شكراً لتعاملكم معنا"></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label>نسبة الضريبة (%)</label>
-                                <input type="number" id="taxRate" class="form-input" min="0" max="100" step="0.5" value="0">
-                            </div>
-                            <div class="form-group">
-                                <label>الرقم الضريبي</label>
-                                <input type="text" id="taxNumberInput" class="form-input" placeholder="مثال: 123-456-789">
-                            </div>
-                            <div class="form-group">
-                                <label>العملة</label>
-                                <input type="text" id="currency" class="form-input" value="ج.م">
-                            </div>
-                            <button class="btn btn-primary" onclick="saveSettings()">حفظ الإعدادات</button>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-header"><h3>البيانات والنسخ الاحتياطي</h3></div>
-                        <div class="card-body">
-                            <button class="btn btn-warning btn-block" onclick="resetData()">&#x1F5D1; مسح جميع البيانات</button>
-                            <button class="btn btn-success btn-block" onclick="downloadBackup()">&#x1F4BE; تحميل نسخة احتياطية</button>
-                            <button class="btn btn-info btn-block" onclick="importBackup()">&#x1F4C2; استيراد نسخة احتياطية</button>
-                            <button class="btn btn-secondary btn-block" onclick="exportInventoryCSV()">&#x1F4CA; تصدير المخزون CSV</button>
-                            <button id="installAppBtn" class="btn btn-success btn-block" style="display:none;margin-top:12px;">&#x1F4F2; تثبيت التطبيق</button>
                         </div>
                     </div>
                 </div>
@@ -879,6 +1010,14 @@
             <div class="form-group">
                 <label>الحد الأدنى للجملة</label>
                 <input type="number" id="newMedMinWholesaleQty" class="form-input" min="1" value="10">
+            </div>
+            <div class="form-group">
+                <label>رقم الباتش (Batch)</label>
+                <input type="text" id="newMedBatch" class="form-input" placeholder="رقم الباتش">
+            </div>
+            <div class="form-group">
+                <label>نقطة إعادة الطلب</label>
+                <input type="number" id="newMedReorderPoint" class="form-input" min="0" value="10">
             </div>
             <div class="form-group">
                 <label><input type="checkbox" id="newMedRx"> يحتاج وصفة طبية</label>
@@ -1268,6 +1407,553 @@
             <button class="btn btn-success btn-block" onclick="confirmDailyClosing()">إقفال اليوم</button>
         </div>
     </div>
+
+    <!-- ===== مودال مستودع ===== -->
+    <div class="modal" id="warehouseModal">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="modal-close">&times;</span>
+            <h2 id="warehouseModalTitle">إضافة مستودع</h2>
+            <input type="hidden" id="warehouseEditId" value="">
+            <div class="form-group">
+                <label>الاسم <span class="required">*</span></label>
+                <input type="text" id="warehouseName" class="form-input" placeholder="اسم المستودع">
+            </div>
+            <div class="form-group">
+                <label>الموقع</label>
+                <input type="text" id="warehouseLocation" class="form-input" placeholder="الموقع">
+            </div>
+            <div class="form-group">
+                <label>الهاتف</label>
+                <input type="tel" id="warehousePhone" class="form-input" placeholder="رقم الهاتف">
+            </div>
+            <div class="form-group">
+                <label>المسؤول</label>
+                <input type="text" id="warehouseManager" class="form-input" placeholder="اسم المسؤول">
+            </div>
+            <button class="btn btn-success btn-block" onclick="saveWarehouse()">حفظ</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال تحويل مخزون ===== -->
+    <div class="modal" id="transferModal">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="modal-close">&times;</span>
+            <h2>تحويل مخزون</h2>
+            <div class="form-group">
+                <label>من المستودع</label>
+                <select id="transferFrom" class="form-select"></select>
+            </div>
+            <div class="form-group">
+                <label>إلى المستودع</label>
+                <select id="transferTo" class="form-select"></select>
+            </div>
+            <div class="form-group">
+                <label>الدواء</label>
+                <select id="transferMedicine" class="form-select"></select>
+            </div>
+            <div class="form-group">
+                <label>الكمية</label>
+                <input type="number" id="transferQty" class="form-input" min="1" value="1">
+            </div>
+            <button class="btn btn-success btn-block" onclick="saveTransfer()">تحويل</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال أمر شراء ===== -->
+    <div class="modal" id="poModal">
+        <div class="modal-content" style="max-width:550px;">
+            <span class="modal-close">&times;</span>
+            <h2 id="poModalTitle">أمر شراء جديد</h2>
+            <input type="hidden" id="poEditId" value="">
+            <div class="form-group">
+                <label>المورد</label>
+                <select id="poSupplier" class="form-select"></select>
+            </div>
+            <div class="form-group">
+                <label>التاريخ</label>
+                <input type="date" id="poDate" class="form-input">
+            </div>
+            <div class="form-group">
+                <label>الأصناف</label>
+                <div id="poItemsContainer"></div>
+                <button class="btn btn-sm btn-secondary" onclick="addPOItemRow()" style="margin-top:4px;"><i class="fas fa-plus"></i> إضافة صنف</button>
+            </div>
+            <button class="btn btn-success btn-block" onclick="savePO()">حفظ أمر الشراء</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال عرض أمر شراء ===== -->
+    <div class="modal" id="poDetailModal">
+        <div class="modal-content" style="max-width:500px;">
+            <span class="modal-close">&times;</span>
+            <h2>تفاصيل أمر الشراء</h2>
+            <div id="poDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- ===== مودال طبيب ===== -->
+    <div class="modal" id="doctorModal">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="modal-close">&times;</span>
+            <h2 id="doctorModalTitle">إضافة طبيب</h2>
+            <input type="hidden" id="doctorEditId" value="">
+            <div class="form-group">
+                <label>الاسم <span class="required">*</span></label>
+                <input type="text" id="doctorName" class="form-input" placeholder="اسم الطبيب">
+            </div>
+            <div class="form-group">
+                <label>التخصص</label>
+                <input type="text" id="doctorSpecialty" class="form-input" placeholder="التخصص">
+            </div>
+            <div class="form-group">
+                <label>الهاتف</label>
+                <input type="tel" id="doctorPhone" class="form-input" placeholder="رقم الهاتف">
+            </div>
+            <div class="form-group">
+                <label>البريد الإلكتروني</label>
+                <input type="email" id="doctorEmail" class="form-input" placeholder="البريد الإلكتروني">
+            </div>
+            <button class="btn btn-success btn-block" onclick="saveDoctor()">حفظ</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال بطاقة هدايا ===== -->
+    <div class="modal" id="giftCardModal">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="modal-close">&times;</span>
+            <h2 id="giftCardModalTitle">إضافة بطاقة هدايا</h2>
+            <input type="hidden" id="giftCardEditId" value="">
+            <div class="form-group">
+                <label>الكود <span class="required">*</span></label>
+                <input type="text" id="giftCardCode" class="form-input" placeholder="كود البطاقة">
+            </div>
+            <div class="form-group">
+                <label>الرصيد <span class="required">*</span></label>
+                <input type="number" id="giftCardBalance" class="form-input" min="0" step="0.5" placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label>تاريخ الانتهاء</label>
+                <input type="date" id="giftCardExpiry" class="form-input">
+            </div>
+            <button class="btn btn-success btn-block" onclick="saveGiftCard()">حفظ</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال كوبون ===== -->
+    <div class="modal" id="couponModal">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="modal-close">&times;</span>
+            <h2 id="couponModalTitle">إضافة كوبون خصم</h2>
+            <input type="hidden" id="couponEditId" value="">
+            <div class="form-group">
+                <label>الكود <span class="required">*</span></label>
+                <input type="text" id="couponCode" class="form-input" placeholder="كود الكوبون">
+            </div>
+            <div class="form-group">
+                <label>النوع</label>
+                <select id="couponType" class="form-select">
+                    <option value="percent">نسبة (%)</option>
+                    <option value="fixed">قيمة ثابتة</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>القيمة <span class="required">*</span></label>
+                <input type="number" id="couponValue" class="form-input" min="0" step="0.5" placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label>الحد الأدنى للشراء</label>
+                <input type="number" id="couponMinPurchase" class="form-input" min="0" step="0.5" placeholder="0">
+            </div>
+            <button class="btn btn-success btn-block" onclick="saveCoupon()">حفظ</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال تركيبة ===== -->
+    <div class="modal" id="compoundModal">
+        <div class="modal-content" style="max-width:500px;">
+            <span class="modal-close">&times;</span>
+            <h2 id="compoundModalTitle">إضافة تركيبة</h2>
+            <input type="hidden" id="compoundEditId" value="">
+            <div class="form-group">
+                <label>اسم التركيبة <span class="required">*</span></label>
+                <input type="text" id="compoundName" class="form-input" placeholder="اسم التركيبة">
+            </div>
+            <div class="form-group">
+                <label>سعر البيع (اترك فارغاً للحساب التلقائي)</label>
+                <input type="number" id="compoundPrice" class="form-input" min="0" step="0.5" placeholder="سعر البيع">
+            </div>
+            <div class="form-group">
+                <label>المكونات</label>
+                <div id="compoundIngredientsContainer"></div>
+                <button class="btn btn-sm btn-secondary" onclick="addCompoundIngredient()" style="margin-top:4px;"><i class="fas fa-plus"></i> إضافة مكون</button>
+            </div>
+            <button class="btn btn-success btn-block" onclick="saveCompound()">حفظ التركيبة</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال عرض تركيبة ===== -->
+    <div class="modal" id="compoundDetailModal">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="modal-close">&times;</span>
+            <h2>تفاصيل التركيبة</h2>
+            <div id="compoundDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- ===== مودال هدف ===== -->
+    <div class="modal" id="targetModal">
+        <div class="modal-content" style="max-width:400px;">
+            <span class="modal-close">&times;</span>
+            <h2 id="targetModalTitle">إضافة هدف</h2>
+            <input type="hidden" id="targetEditId" value="">
+            <div class="form-group">
+                <label>الشهر (1-12)</label>
+                <input type="number" id="targetMonth" class="form-input" min="1" max="12">
+            </div>
+            <div class="form-group">
+                <label>السنة</label>
+                <input type="number" id="targetYear" class="form-input" min="2020">
+            </div>
+            <div class="form-group">
+                <label>قيمة الهدف <span class="required">*</span></label>
+                <input type="number" id="targetAmount" class="form-input" min="0" step="0.5" placeholder="0.00">
+            </div>
+            <button class="btn btn-success btn-block" onclick="saveTarget()">حفظ الهدف</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال تسجيل الدخول السريع (PIN) ===== -->
+    <div class="modal" id="quickLoginModal">
+        <div class="modal-content" style="max-width:350px;text-align:center;">
+            <span class="modal-close">&times;</span>
+            <h2>&#x1F511; تسجيل دخول سريع</h2>
+            <p style="margin:8px 0;color:var(--text-muted);font-size:13px;">أدخل الرقم السري للكاشير</p>
+            <div class="form-group">
+                <input type="password" id="quickPinInput" class="form-input" style="text-align:center;font-size:24px;letter-spacing:8px;" maxlength="20" placeholder="****" autocomplete="off">
+            </div>
+            <button class="btn btn-primary btn-block" onclick="quickLogin()">دخول</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال الاستيراد ===== -->
+    <div class="modal" id="importModal">
+        <div class="modal-content" style="max-width:550px;">
+            <span class="modal-close">&times;</span>
+            <h2>&#x1F4C1; استيراد بيانات</h2>
+            <div class="form-group">
+                <label>نوع البيانات</label>
+                <select id="importType" class="form-select">
+                    <option value="medicines">أدوية</option>
+                    <option value="customers">عملاء</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>ملف CSV</label>
+                <input type="file" id="importFile" accept=".csv,.txt" class="form-input">
+            </div>
+            <button class="btn btn-info" onclick="previewImport()">معاينة</button>
+            <div id="importPreview" style="margin-top:8px;max-height:200px;overflow:auto;"></div>
+            <p id="importStatus" style="margin-top:8px;font-weight:600;"></p>
+            <button class="btn btn-success btn-block" onclick="doImport()" style="margin-top:8px;">استيراد</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال الأرشفة ===== -->
+    <div class="modal" id="archiveModal">
+        <div class="modal-content" style="max-width:400px;">
+            <span class="modal-close">&times;</span>
+            <h2>&#x1F4C2; أرشفة الفواتير القديمة</h2>
+            <p style="color:var(--text-muted);font-size:13px;">سيتم نقل الفواتير المكتملة الأقدم من العدد المحدد من الأيام إلى الأرشيف.</p>
+            <div class="form-group">
+                <label>عدد الأيام</label>
+                <input type="number" id="archiveDays" class="form-input" value="365" min="30">
+            </div>
+            <button class="btn btn-warning btn-block" onclick="doArchive()">أرشفة</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال مسح البيانات ===== -->
+    <div class="modal" id="purgeModal">
+        <div class="modal-content" style="max-width:400px;">
+            <span class="modal-close">&times;</span>
+            <h2>&#x26A0;&#xFE0F; مسح جميع البيانات</h2>
+            <p style="color:#ef4444;font-weight:600;">تحذير: هذا الإجراء لا يمكن التراجع عنه!</p>
+            <button class="btn btn-danger btn-block" onclick="doPurge()">مسح الكل</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال الإعلان ===== -->
+    <div class="modal" id="announcementModal">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="modal-close">&times;</span>
+            <h2>إضافة إعلان</h2>
+            <div class="form-group">
+                <label>النوع</label>
+                <select id="announcementType" class="form-select">
+                    <option value="info">معلومات</option>
+                    <option value="important">مهم</option>
+                    <option value="general">عام</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>العنوان <span class="required">*</span></label>
+                <input type="text" id="announcementTitle" class="form-input" placeholder="عنوان الإعلان">
+            </div>
+            <div class="form-group">
+                <label>المحتوى <span class="required">*</span></label>
+                <textarea id="announcementBody" class="form-input" rows="3" placeholder="نص الإعلان"></textarea>
+            </div>
+            <button class="btn btn-success btn-block" onclick="saveAnnouncement()">حفظ الإعلان</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال سعر مورد ===== -->
+    <div class="modal" id="spModal">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="modal-close">&times;</span>
+            <h2>إضافة سعر مورد</h2>
+            <div class="form-group">
+                <label>المورد</label>
+                <select id="spSupplier" class="form-select"></select>
+            </div>
+            <div class="form-group">
+                <label>الدواء</label>
+                <select id="spMedicine" class="form-select" onchange="spSelectMedicine()"></select>
+            </div>
+            <div class="form-group">
+                <label>اسم الدواء</label>
+                <input type="text" id="spMedicineName" class="form-input" readonly>
+            </div>
+            <div class="form-group">
+                <label>السعر <span class="required">*</span></label>
+                <input type="number" id="spPrice" class="form-input" min="0" step="0.5" placeholder="0.00">
+            </div>
+            <button class="btn btn-success btn-block" onclick="saveSupplierPrice()">حفظ</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال عملة ===== -->
+    <div class="modal" id="currencyModal">
+        <div class="modal-content" style="max-width:400px;">
+            <span class="modal-close">&times;</span>
+            <h2 id="currencyModalTitle">إضافة عملة</h2>
+            <input type="hidden" id="currencyEditCode" value="">
+            <div class="form-group">
+                <label>كود العملة <span class="required">*</span></label>
+                <input type="text" id="currencyCode" class="form-input" placeholder="USD" maxlength="3">
+            </div>
+            <div class="form-group">
+                <label>الاسم <span class="required">*</span></label>
+                <input type="text" id="currencyName" class="form-input" placeholder="دولار أمريكي">
+            </div>
+            <div class="form-group">
+                <label>الرمز <span class="required">*</span></label>
+                <input type="text" id="currencySymbol" class="form-input" placeholder="$">
+            </div>
+            <div class="form-group">
+                <label>سعر الصرف (مقابل الجنيه) <span class="required">*</span></label>
+                <input type="number" id="currencyRate" class="form-input" min="0" step="0.01" value="1">
+            </div>
+            <button class="btn btn-success btn-block" onclick="saveCurrency()">حفظ</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال الترحيب (Onboarding) ===== -->
+    <div class="modal" id="onboardingModal">
+        <div class="modal-content" style="max-width:500px;text-align:center;">
+            <span class="modal-close">&times;</span>
+            <h2>&#x1F44B; مرحباً بك في ValoPOS!</h2>
+            <p style="color:var(--text-muted);margin:12px 0;">شكراً لاختيارك ValoPOS. يرجى إدخال المعلومات الأساسية للصيدلية.</p>
+            <div class="form-group">
+                <label>اسم الصيدلية <span class="required">*</span></label>
+                <input type="text" id="onboardName" class="form-input" placeholder="اسم الصيدلية" value="ValoPOS">
+            </div>
+            <div class="form-group">
+                <label>العنوان</label>
+                <input type="text" id="onboardAddress" class="form-input" placeholder="عنوان الصيدلية">
+            </div>
+            <div class="form-group">
+                <label>رقم الهاتف</label>
+                <input type="tel" id="onboardPhone" class="form-input" placeholder="رقم الهاتف">
+            </div>
+            <button class="btn btn-primary btn-block" onclick="completeOnboarding()">ابدأ الآن</button>
+        </div>
+    </div>
+
+    <!-- ===== صفحة المستودعات ===== -->
+    <section class="page" id="page-warehouses">
+        <div class="page-header">
+            <h1>&#x1F3E2; المستودعات</h1>
+            <p>إدارة المخازن والمستودعات</p>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddWarehouse()"><i class="fas fa-plus"></i> إضافة مستودع</button>
+            <button class="btn btn-info" onclick="showNewTransfer()"><i class="fas fa-exchange-alt"></i> تحويل مخزون</button>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>قائمة المستودعات</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>#</th><th>الاسم</th><th>الموقع</th><th>عدد الأصناف</th><th>الإجراءات</th></tr></thead>
+                    <tbody id="warehouseBody"></tbody>
+                </table>
+                <div id="warehousePagination" class="pagination"></div>
+            </div>
+        </div>
+        <div class="card" style="margin-top:12px;">
+            <div class="card-header"><h3>&#x1F504; سجل تحويلات المخزون</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>#</th><th>من</th><th>إلى</th><th>الدواء</th><th>الكمية</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+                    <tbody id="transferBody"></tbody>
+                </table>
+                <div id="transferPagination" class="pagination"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== صفحة أوامر الشراء ===== -->
+    <section class="page" id="page-po">
+        <div class="page-header">
+            <h1>&#x1F4E6; أوامر الشراء</h1>
+            <p>إدارة طلبات الشراء للموردين</p>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddPO()"><i class="fas fa-plus"></i> أمر شراء جديد</button>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>قائمة أوامر الشراء</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>#</th><th>المورد</th><th>الأصناف</th><th>الإجمالي</th><th>الحالة</th><th>التاريخ</th><th>الإجراءات</th></tr></thead>
+                    <tbody id="poBody"></tbody>
+                </table>
+                <div id="poPagination" class="pagination"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== صفحة الأطباء ===== -->
+    <section class="page" id="page-doctors">
+        <div class="page-header">
+            <h1>&#x1FA7A; الأطباء</h1>
+            <p>إدارة سجل الأطباء والوصفات</p>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddDoctor()"><i class="fas fa-plus"></i> إضافة طبيب</button>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>قائمة الأطباء</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>#</th><th>الاسم</th><th>التخصص</th><th>الهاتف</th><th>الوصفات</th><th>الإجراءات</th></tr></thead>
+                    <tbody id="doctorBody"></tbody>
+                </table>
+                <div id="doctorPagination" class="pagination"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== صفحة الولاء والمكافآت ===== -->
+    <section class="page" id="page-loyalty">
+        <div class="page-header">
+            <h1>&#x1F3C6; الولاء والمكافآت</h1>
+            <p>نظام نقاط ولاء العملاء</p>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>&#x1F4CA; ترتيب النقاط</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>العميل</th><th>النقاط</th><th>المستوى</th><th>الخصم</th><th>الإجراءات</th></tr></thead>
+                    <tbody id="loyaltyBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== صفحة بطاقات الهدايا ===== -->
+    <section class="page" id="page-giftcards">
+        <div class="page-header">
+            <h1>&#x1F381; بطاقات الهدايا</h1>
+            <p>إدارة بطاقات الهدايا والرصيد</p>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddGiftCard()"><i class="fas fa-plus"></i> إضافة بطاقة</button>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>قائمة البطاقات</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>#</th><th>الكود</th><th>الرصيد</th><th>تاريخ الانتهاء</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+                    <tbody id="giftCardBody"></tbody>
+                </table>
+                <div id="giftCardPagination" class="pagination"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== صفحة كوبونات الخصم ===== -->
+    <section class="page" id="page-coupons">
+        <div class="page-header">
+            <h1>&#x1F4B3; كوبونات الخصم</h1>
+            <p>إدارة كوبونات وقسائم الخصم</p>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddCoupon()"><i class="fas fa-plus"></i> إضافة كوبون</button>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>قائمة الكوبونات</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>#</th><th>الكود</th><th>الخصم</th><th>الحد الأدنى</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+                    <tbody id="couponBody"></tbody>
+                </table>
+                <div id="couponPagination" class="pagination"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== صفحة التركيبات ===== -->
+    <section class="page" id="page-compounds">
+        <div class="page-header">
+            <h1>&#x2697;&#xFE0F; التركيبات</h1>
+            <p>تركيبات الأدوية الجاهزة</p>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddCompound()"><i class="fas fa-plus"></i> إضافة تركيبة</button>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>قائمة التركيبات</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>#</th><th>الاسم</th><th>المكونات</th><th>التكلفة</th><th>الإجراءات</th></tr></thead>
+                    <tbody id="compoundBody"></tbody>
+                </table>
+                <div id="compoundPagination" class="pagination"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== صفحة أهداف المبيعات ===== -->
+    <section class="page" id="page-targets">
+        <div class="page-header">
+            <h1>&#x1F3AF; أهداف المبيعات</h1>
+            <p>تحديد ومتابعة أهداف المبيعات الشهرية</p>
+        </div>
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddTarget()"><i class="fas fa-plus"></i> إضافة هدف</button>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>قائمة الأهداف</h3></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead><tr><th>الشهر</th><th>الهدف</th><th>المحقق</th><th>التقدم</th><th>الإجراءات</th></tr></thead>
+                    <tbody id="targetBody"></tbody>
+                </table>
+                <div id="targetPagination" class="pagination"></div>
+            </div>
+        </div>
+    </section>
 
     <!-- ====== شاشة تسجيل الدخول ====== -->
     <div class="auth-overlay" id="authOverlay" style="display:flex;">

@@ -530,6 +530,14 @@ function reRenderCurrentPage() {
     else if (id === 'page-reports') renderReports();
     else if (id === 'page-expenses') renderExpenses();
     else if (id === 'page-settings') { loadSettings(); }
+    else if (id === 'page-warehouses') { renderWarehouses(); renderWarehouseTransfers(); }
+    else if (id === 'page-po') { renderPurchaseOrders(); }
+    else if (id === 'page-doctors') { renderDoctors(); }
+    else if (id === 'page-loyalty') { renderLoyalty(); }
+    else if (id === 'page-giftcards') { renderGiftCards(); }
+    else if (id === 'page-coupons') { renderCoupons(); }
+    else if (id === 'page-compounds') { renderCompounds(); }
+    else if (id === 'page-targets') { renderSalesTargets(); }
 }
 
 let currentInvoice = null;
@@ -547,7 +555,21 @@ let appData = {
         receiptFooter: 'شكراً لتعاملكم معنا',
         taxRate: 0,
         currency: 'ج.م',
-        taxNumber: ''
+        taxNumber: '',
+        receiptHeader: 'صيدلية فالوبوس',
+        receiptShowLogo: false,
+        receiptShowTax: true,
+        receiptShowPoints: true,
+        receiptPaperSize: '80mm',
+        loyaltyRate: 1,
+        loyaltyRedeemRate: 100,
+        loyaltyTiers: [
+            { name: 'عادي', minPoints: 0, discountPercent: 0, color: '#94a3b8' },
+            { name: 'فضي', minPoints: 500, discountPercent: 5, color: '#64748b' },
+            { name: 'ذهبي', minPoints: 2000, discountPercent: 10, color: '#f59e0b' },
+            { name: 'بلاتيني', minPoints: 5000, discountPercent: 15, color: '#6366f1' }
+        ],
+        dashboardWidgets: { recentSales: true, topMeds: true, expiryAlerts: true, lowStockAlerts: true, todayStats: true, profitChart: true, targetProgress: true, doctorPrescriptions: true }
     },
     nextInvoiceId: 1,
     nextPurchaseId: 1,
@@ -570,7 +592,46 @@ let appData = {
     users: [
         { id: 1, username: 'admin', password: 'admin123', role: 'admin', name: 'المدير' }
     ],
-    auditLog: []
+    auditLog: [],
+    // Feature 1: Multi-Warehouse
+    nextWarehouseId: 1,
+    warehouses: [{ id: 1, name: 'المخزن الرئيسي', location: '', phone: '', manager: '' }],
+    medicineWarehouses: {},
+    warehouseTransfers: [],
+    nextWarehouseTransferId: 1,
+    // Feature 2: Purchase Orders
+    nextPurchaseOrderId: 1,
+    purchaseOrders: [],
+    poPayments: [],
+    // Feature 3: Doctors
+    nextDoctorId: 1,
+    doctors: [],
+    // Feature 5: Receipt Customization already in settings
+    // Feature 9: Reorder points - added to medicine objects
+    // Feature 10: Sales Targets
+    salesTargets: [],
+    nextSalesTargetId: 1,
+    // Feature 14: Gift Cards + Coupons
+    nextGiftCardId: 1,
+    giftCards: [],
+    nextCouponId: 1,
+    coupons: [],
+    // Feature 15: Compounds
+    nextCompoundId: 1,
+    compounds: [],
+    // Feature 18: Announcements
+    announcements: [],
+    // Feature 19: Supplier Price Lists
+    supplierPrices: [],
+    // Feature 20: Multi-Currency
+    currencies: [
+        { code: 'EGP', name: 'جنيه مصري', symbol: 'ج.م', rate: 1 },
+        { code: 'USD', name: 'دولار', symbol: '$', rate: 30.5 },
+        { code: 'EUR', name: 'يورو', symbol: '€', rate: 33.2 },
+        { code: 'SAR', name: 'ريال سعودي', symbol: 'ر.س', rate: 8.1 }
+    ],
+    defaultCurrency: 'EGP',
+    archived: null
 };
 
 function loadData() {
@@ -732,6 +793,14 @@ navItems.forEach(function(item) {
         if (pageId === 'suppliers') renderSuppliers();
         if (pageId === 'purchases') { renderPurchases(); loadPurchaseSelects(); }
         if (pageId === 'expenses') renderExpenses();
+        if (pageId === 'warehouses') { renderWarehouses(); renderWarehouseTransfers(); }
+        if (pageId === 'po') { renderPurchaseOrders(); }
+        if (pageId === 'doctors') { renderDoctors(); }
+        if (pageId === 'loyalty') { renderLoyalty(); }
+        if (pageId === 'giftcards') { renderGiftCards(); }
+        if (pageId === 'coupons') { renderCoupons(); }
+        if (pageId === 'compounds') { renderCompounds(); }
+        if (pageId === 'targets') { renderSalesTargets(); }
         if (pageId === 'settings') { loadSettings(); if (typeof checkTodayClosing === 'function') checkTodayClosing(); }
         if (window.innerWidth < 768) {
             document.getElementById('sidebar').classList.remove('open');
@@ -1158,8 +1227,19 @@ function completeSale(subtotal, discount, tax, net, paid) {
             diagnosis: (document.getElementById('rxDiagnosis')?.value || '').trim(),
             refills: parseInt(document.getElementById('rxRefills')?.value) || 0,
             date: document.getElementById('rxDate')?.value || ''
-        }
+        },
+        giftCardCode: document.getElementById('giftCardCodeInput')?.value || '',
+        couponCode: document.getElementById('couponCodeInput')?.value || ''
     };
+    // Deduct from gift card if used
+    var gcCode = document.getElementById('giftCardCodeInput')?.value;
+    if (gcCode) {
+        var gc = (appData.giftCards || []).find(function(c) { return c.code === gcCode && c.status === 'نشطة'; });
+        if (gc) {
+            gc.balance = Math.max(0, (gc.balance || 0) - net);
+            if (gc.balance <= 0) gc.status = 'منتهية';
+        }
+    }
     resetPrescriptionFields();
     appData.invoices.push(invoice);
     appData.cart.forEach(function(item) {
@@ -1600,6 +1680,8 @@ document.getElementById('saveNewMedBtn').addEventListener('click', function() {
     var schedule = document.getElementById('medSchedule')?.value || 'normal';
     var wholesalePrice = parseFloat(document.getElementById('newMedWholesalePrice')?.value) || 0;
     var minWholesaleQty = parseInt(document.getElementById('newMedMinWholesaleQty')?.value) || 10;
+    var batchNumber = document.getElementById('newMedBatch')?.value.trim() || '';
+    var reorderPoint = parseInt(document.getElementById('newMedReorderPoint')?.value) || 0;
     if (!name) { showToast('\u0627\u0644\u0631\u062C\u0627\u0621 \u0625\u062F\u062E\u0627\u0644 \u0627\u0633\u0645 \u0627\u0644\u062F\u0648\u0627\u0621', 'error'); return; }
     if (name.length > 200) { showToast('\u0627\u0633\u0645 \u0627\u0644\u062F\u0648\u0627\u0621 \u0637\u0648\u064A\u0644 \u062C\u062F\u0627\u064B', 'error'); return; }
     if (barcode && barcode.length > 50) { showToast('\u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F \u0637\u0648\u064A\u0644 \u062C\u062F\u0627\u064B', 'error'); return; }
@@ -1623,7 +1705,9 @@ document.getElementById('saveNewMedBtn').addEventListener('click', function() {
         rx: rx,
         schedule: schedule,
         wholesalePrice: wholesalePrice,
-        minWholesaleQty: minWholesaleQty
+        minWholesaleQty: minWholesaleQty,
+        batchNumber: batchNumber,
+        reorderPoint: reorderPoint
     });
     saveData();
     saveMeds();
@@ -2462,9 +2546,46 @@ function loadSettings() {
     document.getElementById('currency').value = s.currency || getText('settings.currencyDefault');
     var taxEl = document.getElementById('taxNumberInput');
     if (taxEl) taxEl.value = s.taxNumber || '';
+    var rh = document.getElementById('receiptHeader');
+    if (rh) rh.value = s.receiptHeader || '';
+    var rps = document.getElementById('receiptPaperSize');
+    if (rps) rps.value = s.receiptPaperSize || '80mm';
+    var rsl = document.getElementById('receiptShowLogo');
+    if (rsl) rsl.checked = s.receiptShowLogo || false;
+    var rst = document.getElementById('receiptShowTax');
+    if (rst) rst.checked = s.receiptShowTax !== false;
+    var rsp = document.getElementById('receiptShowPoints');
+    if (rsp) rsp.checked = s.receiptShowPoints !== false;
+    var lr = document.getElementById('loyaltyRate');
+    if (lr) lr.value = s.loyaltyRate || 1;
+    var lrr = document.getElementById('loyaltyRedeemRate');
+    if (lrr) lrr.value = s.loyaltyRedeemRate || 100;
+    loadLoyaltyTierSettings();
+    // Load widget settings checkboxes
+    var w = s.dashboardWidgets || {};
+    var widgetChecks = {
+        widgetRecentSales: 'recentSales', widgetTopMeds: 'topMeds', widgetExpiryAlerts: 'expiryAlerts',
+        widgetLowStock: 'lowStockAlerts', widgetTodayStats: 'todayStats', widgetProfitChart: 'profitChart',
+        widgetTargetProgress: 'targetProgress', widgetDoctorRx: 'doctorPrescriptions'
+    };
+    Object.keys(widgetChecks).forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.checked = w[widgetChecks[id]] !== false;
+    });
     renderUsersTable();
     renderInsurances();
     loadInsuranceSelect();
+    renderCurrencies();
+    renderAnnouncements();
+    renderSupplierPrices();
+    // Load supplier filter dropdown
+    var spf = document.getElementById('spSupplierFilter');
+    if (spf) {
+        spf.innerHTML = '<option value="">الكل</option>';
+        (appData.suppliers || []).forEach(function(sup) {
+            spf.innerHTML += '<option value="' + sup.id + '">' + escapeHtml(sup.name) + '</option>';
+        });
+    }
 }
 
 function saveSettings() {
@@ -2476,6 +2597,22 @@ function saveSettings() {
     appData.settings.currency = document.getElementById('currency').value || getText('settings.currencyDefault');
     var taxEl = document.getElementById('taxNumberInput');
     if (taxEl) appData.settings.taxNumber = taxEl.value;
+    // Also save receipt settings
+    var rh = document.getElementById('receiptHeader');
+    if (rh) appData.settings.receiptHeader = rh.value;
+    var rps = document.getElementById('receiptPaperSize');
+    if (rps) appData.settings.receiptPaperSize = rps.value;
+    var rsl = document.getElementById('receiptShowLogo');
+    if (rsl) appData.settings.receiptShowLogo = rsl.checked;
+    var rst = document.getElementById('receiptShowTax');
+    if (rst) appData.settings.receiptShowTax = rst.checked;
+    var rsp = document.getElementById('receiptShowPoints');
+    if (rsp) appData.settings.receiptShowPoints = rsp.checked;
+    // Loyalty rate
+    var lr = document.getElementById('loyaltyRate');
+    if (lr) appData.settings.loyaltyRate = parseFloat(lr.value) || 1;
+    var lrr = document.getElementById('loyaltyRedeemRate');
+    if (lrr) appData.settings.loyaltyRedeemRate = parseFloat(lrr.value) || 100;
     updateCur();
     saveData();
     showToast(getText('settings.saved'), 'success');
@@ -3564,3 +3701,1403 @@ document.getElementById('authModeBtn').addEventListener('click', function() {
         document.getElementById('authPassword').focus();
     }
 });
+
+// ======================================================================
+// FEATURE 1: Multi-Warehouse Management
+// ======================================================================
+function renderWarehouses() {
+    var tbody = document.getElementById('warehouseBody');
+    if (!tbody) return;
+    var warehouses = appData.warehouses || [];
+    tbody.innerHTML = '';
+    if (warehouses.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center empty-state">لا توجد مستودعات</td></tr>';
+        return;
+    }
+    warehouses.forEach(function(w) {
+        var medCount = Object.keys(appData.medicineWarehouses || {}).filter(function(id) {
+            return appData.medicineWarehouses[id] && appData.medicineWarehouses[id][w.id] > 0;
+        }).length;
+        var tr = document.createElement('tr');
+        tr.innerHTML = '\n            <td>' + w.id + '</td>\n            <td><strong>' + escapeHtml(w.name) + '</strong></td>\n            <td>' + escapeHtml(w.location || '') + '</td>\n            <td>' + (medCount || 0) + '</td>\n            <td>\n                <button class="btn btn-sm btn-primary" onclick="editWarehouse(' + w.id + ')">تعديل</button>\n                <button class="btn btn-sm btn-danger" onclick="deleteWarehouse(' + w.id + ')">حذف</button>\n            </td>\n        ';
+        tbody.appendChild(tr);
+    });
+}
+
+function showAddWarehouse() {
+    var modal = document.getElementById('warehouseModal');
+    if (!modal) return;
+    document.getElementById('warehouseEditId').value = '';
+    document.getElementById('warehouseModalTitle').textContent = 'إضافة مستودع';
+    document.getElementById('warehouseName').value = '';
+    document.getElementById('warehouseLocation').value = '';
+    document.getElementById('warehousePhone').value = '';
+    document.getElementById('warehouseManager').value = '';
+    modal.style.display = 'block';
+}
+
+function editWarehouse(id) {
+    var w = (appData.warehouses || []).find(function(x) { return x.id === id; });
+    if (!w) return;
+    document.getElementById('warehouseEditId').value = id;
+    document.getElementById('warehouseModalTitle').textContent = 'تعديل مستودع';
+    document.getElementById('warehouseName').value = w.name;
+    document.getElementById('warehouseLocation').value = w.location || '';
+    document.getElementById('warehousePhone').value = w.phone || '';
+    document.getElementById('warehouseManager').value = w.manager || '';
+    document.getElementById('warehouseModal').style.display = 'block';
+}
+
+function saveWarehouse() {
+    var id = document.getElementById('warehouseEditId').value;
+    var name = document.getElementById('warehouseName').value.trim();
+    var location = document.getElementById('warehouseLocation').value.trim();
+    var phone = document.getElementById('warehousePhone').value.trim();
+    var manager = document.getElementById('warehouseManager').value.trim();
+    if (!name) { showToast('الرجاء إدخال اسم المستودع', 'warning'); return; }
+    if (id) {
+        var w = (appData.warehouses || []).find(function(x) { return x.id === parseInt(id); });
+        if (w) { w.name = name; w.location = location; w.phone = phone; w.manager = manager; }
+    } else {
+        if (!appData.nextWarehouseId) appData.nextWarehouseId = 1;
+        if (!appData.warehouses) appData.warehouses = [];
+        appData.warehouses.push({ id: appData.nextWarehouseId++, name: name, location: location, phone: phone, manager: manager });
+    }
+    saveData();
+    renderWarehouses();
+    document.getElementById('warehouseModal').style.display = 'none';
+    showToast('تم حفظ المستودع بنجاح', 'success');
+    audit('warehouse', id ? 'تعديل مستودع: ' + name : 'إضافة مستودع: ' + name);
+}
+
+function deleteWarehouse(id) {
+    if (!confirm('هل أنت متأكد من حذف هذا المستودع؟')) return;
+    appData.warehouses = (appData.warehouses || []).filter(function(w) { return w.id !== id; });
+    if (appData.medicineWarehouses) {
+        Object.keys(appData.medicineWarehouses).forEach(function(mid) {
+            if (appData.medicineWarehouses[mid]) delete appData.medicineWarehouses[mid][id];
+        });
+    }
+    saveData();
+    renderWarehouses();
+    showToast('تم حذف المستودع', 'success');
+}
+
+function renderWarehouseTransfers() {
+    var tbody = document.getElementById('transferBody');
+    if (!tbody) return;
+    var transfers = appData.warehouseTransfers || [];
+    tbody.innerHTML = '';
+    if (transfers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center empty-state">لا يوجد تحويلات مخزون</td></tr>';
+        return;
+    }
+    transfers.slice().reverse().forEach(function(t) {
+        var fromName = 'غير معروف', toName = 'غير معروف';
+        var wFrom = (appData.warehouses || []).find(function(w) { return w.id === t.fromWarehouse; });
+        var wTo = (appData.warehouses || []).find(function(w) { return w.id === t.toWarehouse; });
+        if (wFrom) fromName = wFrom.name;
+        if (wTo) toName = wTo.name;
+        var badge = t.status === 'مكتمل' ? 'badge-success' : t.status === 'معلق' ? 'badge-warning' : 'badge-info';
+        var tr = document.createElement('tr');
+        tr.innerHTML = '\n            <td>#' + t.id + '</td>\n            <td>' + escapeHtml(fromName) + '</td>\n            <td>' + escapeHtml(toName) + '</td>\n            <td>' + escapeHtml(t.medicineName || '') + '</td>\n            <td>' + (t.qty || 0) + '</td>\n            <td><span class="badge ' + badge + '">' + escapeHtml(t.status) + '</span></td>\n            <td>' + formatDate(t.date) + '</td>\n        ';
+        tbody.appendChild(tr);
+    });
+}
+
+function showNewTransfer() {
+    var modal = document.getElementById('transferModal');
+    if (!modal) return;
+    var fromSelect = document.getElementById('transferFrom');
+    var toSelect = document.getElementById('transferTo');
+    var medSelect = document.getElementById('transferMedicine');
+    fromSelect.innerHTML = '';
+    toSelect.innerHTML = '';
+    medSelect.innerHTML = '';
+    (appData.warehouses || []).forEach(function(w) {
+        fromSelect.innerHTML += '<option value="' + w.id + '">' + escapeHtml(w.name) + '</option>';
+        toSelect.innerHTML += '<option value="' + w.id + '">' + escapeHtml(w.name) + '</option>';
+    });
+    medicinesDB.forEach(function(m) {
+        medSelect.innerHTML += '<option value="' + m.id + '">' + escapeHtml(m.name) + ' (متوفر: ' + m.qty + ')</option>';
+    });
+    document.getElementById('transferQty').value = 1;
+    modal.style.display = 'block';
+}
+
+function saveTransfer() {
+    var fromId = parseInt(document.getElementById('transferFrom').value);
+    var toId = parseInt(document.getElementById('transferTo').value);
+    var medId = parseInt(document.getElementById('transferMedicine').value);
+    var qty = parseInt(document.getElementById('transferQty').value) || 0;
+    if (fromId === toId) { showToast('المستودع المصدر والهدف يجب أن يكونا مختلفين', 'warning'); return; }
+    if (qty <= 0) { showToast('الرجاء إدخال كمية صحيحة', 'warning'); return; }
+    var med = getMedicineById(medId);
+    if (!med) { showToast('الدواء غير موجود', 'error'); return; }
+    if (med.qty < qty) { showToast('الكمية غير متوفرة في المخزون الكلي', 'error'); return; }
+    if (!appData.nextWarehouseTransferId) appData.nextWarehouseTransferId = 1;
+    if (!appData.warehouseTransfers) appData.warehouseTransfers = [];
+    if (!appData.medicineWarehouses) appData.medicineWarehouses = {};
+    var mw = appData.medicineWarehouses;
+    if (!mw[medId]) mw[medId] = {};
+    var fromQty = mw[medId][fromId] || 0;
+    var toQty = mw[medId][toId] || 0;
+    if (fromQty < qty && fromQty > 0) { showToast('الكمية غير متوفرة في المستودع المصدر', 'error'); return; }
+    mw[medId][fromId] = Math.max(0, fromQty - qty);
+    mw[medId][toId] = (toQty || 0) + qty;
+    appData.warehouseTransfers.push({
+        id: appData.nextWarehouseTransferId++,
+        fromWarehouse: fromId, toWarehouse: toId,
+        medicineId: medId, medicineName: med.name,
+        qty: qty, status: 'مكتمل',
+        date: new Date().toISOString()
+    });
+    saveData();
+    renderWarehouseTransfers();
+    document.getElementById('transferModal').style.display = 'none';
+    showToast('تم تحويل المخزون بنجاح', 'success');
+    audit('transfer', 'تحويل ' + qty + ' من ' + med.name);
+}
+
+// ======================================================================
+// FEATURE 2: Purchase Orders
+// ======================================================================
+function renderPurchaseOrders() {
+    var tbody = document.getElementById('poBody');
+    if (!tbody) return;
+    var pos = appData.purchaseOrders || [];
+    tbody.innerHTML = '';
+    if (pos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center empty-state">لا يوجد أوامر شراء</td></tr>';
+        return;
+    }
+    pos.slice().reverse().forEach(function(po) {
+        var supplierName = '';
+        if (po.supplierId) {
+            var sup = (appData.suppliers || []).find(function(s) { return s.id === po.supplierId; });
+            if (sup) supplierName = sup.name;
+        }
+        var badge = po.status === 'مستلم' ? 'badge-success' : po.status === 'معلق' ? 'badge-warning' : 'badge-info';
+        var tr = document.createElement('tr');
+        tr.innerHTML = '\n            <td>#' + po.id + '</td>\n            <td>' + escapeHtml(supplierName) + '</td>\n            <td>' + (po.items || []).length + ' أصناف</td>\n            <td>' + formatPrice(po.total || 0) + ' ' + cur + '</td>\n            <td><span class="badge ' + badge + '">' + escapeHtml(po.status) + '</span></td>\n            <td>' + formatDate(po.date) + '</td>\n            <td>\n                <button class="btn btn-sm btn-primary" onclick="viewPO(' + po.id + ')">عرض</button>\n                ' + (po.status !== 'مستلم' ? '<button class="btn btn-sm btn-success" onclick="receivePO(' + po.id + ')">استلام</button>' : '') + '\n                <button class="btn btn-sm btn-danger" onclick="deletePO(' + po.id + ')">حذف</button>\n            </td>\n        ';
+        tbody.appendChild(tr);
+    });
+}
+
+function showAddPO() {
+    var modal = document.getElementById('poModal');
+    if (!modal) return;
+    document.getElementById('poEditId').value = '';
+    document.getElementById('poModalTitle').textContent = 'أمر شراء جديد';
+    document.getElementById('poDate').value = new Date().toISOString().slice(0, 10);
+    var supSelect = document.getElementById('poSupplier');
+    supSelect.innerHTML = '<option value="">اختر المورد</option>';
+    (appData.suppliers || []).forEach(function(s) {
+        supSelect.innerHTML += '<option value="' + s.id + '">' + escapeHtml(s.name) + '</option>';
+    });
+    document.getElementById('poItemsContainer').innerHTML = '';
+    addPOItemRow();
+    modal.style.display = 'block';
+}
+
+function addPOItemRow() {
+    var container = document.getElementById('poItemsContainer');
+    var div = document.createElement('div');
+    div.className = 'po-item-row';
+    div.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;align-items:center;';
+    var select = document.createElement('select');
+    select.className = 'form-input';
+    select.style.cssText = 'flex:1;';
+    select.innerHTML = '<option value="">اختر دواء</option>';
+    medicinesDB.forEach(function(m) {
+        select.innerHTML += '<option value="' + m.id + '">' + escapeHtml(m.name) + ' (' + m.qty + ')</option>';
+    });
+    var qtyInput = document.createElement('input');
+    qtyInput.type = 'number';
+    qtyInput.className = 'form-input';
+    qtyInput.style.cssText = 'width:70px;';
+    qtyInput.placeholder = 'الكمية';
+    qtyInput.min = 1;
+    qtyInput.value = 1;
+    var priceInput = document.createElement('input');
+    priceInput.type = 'number';
+    priceInput.className = 'form-input';
+    priceInput.style.cssText = 'width:90px;';
+    priceInput.placeholder = 'السعر';
+    priceInput.step = '0.5';
+    priceInput.min = 0;
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn btn-sm btn-danger';
+    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+    removeBtn.addEventListener('click', function() { div.remove(); });
+    div.appendChild(select);
+    div.appendChild(qtyInput);
+    div.appendChild(priceInput);
+    div.appendChild(removeBtn);
+    container.appendChild(div);
+}
+
+function savePO() {
+    var supplierId = parseInt(document.getElementById('poSupplier').value) || null;
+    var date = document.getElementById('poDate').value || new Date().toISOString().slice(0, 10);
+    var itemRows = document.querySelectorAll('#poItemsContainer > div');
+    var items = [];
+    var total = 0;
+    itemRows.forEach(function(row) {
+        var selects = row.querySelectorAll('select');
+        var inputs = row.querySelectorAll('input');
+        if (selects.length < 1 || inputs.length < 2) return;
+        var medId = parseInt(selects[0].value);
+        var qty = parseInt(inputs[0].value) || 0;
+        var price = parseFloat(inputs[1].value) || 0;
+        if (!medId || qty <= 0) return;
+        var med = getMedicineById(medId);
+        items.push({ medicineId: medId, medicineName: med ? med.name : '', qty: qty, price: price, subtotal: qty * price });
+        total += qty * price;
+    });
+    if (items.length === 0) { showToast('الرجاء إضافة صنف واحد على الأقل', 'warning'); return; }
+    if (!appData.nextPurchaseOrderId) appData.nextPurchaseOrderId = 1;
+    if (!appData.purchaseOrders) appData.purchaseOrders = [];
+    var po = { id: appData.nextPurchaseOrderId++, supplierId: supplierId, date: date, items: items, total: total, status: 'معلق', createdAt: new Date().toISOString() };
+    appData.purchaseOrders.push(po);
+    saveData();
+    renderPurchaseOrders();
+    document.getElementById('poModal').style.display = 'none';
+    showToast('تم إنشاء أمر الشراء', 'success');
+    audit('po', 'إنشاء أمر شراء #' + po.id);
+}
+
+function viewPO(id) {
+    var po = (appData.purchaseOrders || []).find(function(p) { return p.id === id; });
+    if (!po) return;
+    var supplierName = '';
+    if (po.supplierId) {
+        var sup = (appData.suppliers || []).find(function(s) { return s.id === po.supplierId; });
+        if (sup) supplierName = sup.name;
+    }
+    var html = '<div class="detail-card"><h4>أمر شراء #' + po.id + '</h4>';
+    html += '<p>المورد: ' + escapeHtml(supplierName || 'غير محدد') + '</p>';
+    html += '<p>التاريخ: ' + formatDate(po.date) + '</p>';
+    html += '<p>الحالة: <span class="badge badge-' + (po.status === 'مستلم' ? 'success' : 'warning') + '">' + escapeHtml(po.status) + '</span></p>';
+    html += '<table class="table"><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>';
+    (po.items || []).forEach(function(item) {
+        html += '<tr><td>' + escapeHtml(item.medicineName || '') + '</td><td>' + item.qty + '</td><td>' + formatPrice(item.price) + '</td><td>' + formatPrice(item.subtotal) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    html += '<p style="font-weight:700;text-align:left;margin-top:8px;">الإجمالي: ' + formatPrice(po.total || 0) + ' ' + cur + '</p></div>';
+    document.getElementById('poDetailContent').innerHTML = html;
+    document.getElementById('poDetailModal').style.display = 'block';
+}
+
+function receivePO(id) {
+    if (!confirm('هل أنت متأكد من استلام هذا الأمر؟ سيتم إضافة الأصناف إلى المخزون.')) return;
+    var po = (appData.purchaseOrders || []).find(function(p) { return p.id === id; });
+    if (!po) return;
+    (po.items || []).forEach(function(item) {
+        var med = getMedicineById(item.medicineId);
+        if (med) med.qty = (med.qty || 0) + item.qty;
+    });
+    po.status = 'مستلم';
+    saveData();
+    saveMeds();
+    renderPurchaseOrders();
+    showToast('تم استلام الأمر رقم #' + po.id, 'success');
+    audit('po_receive', 'استلام أمر شراء #' + po.id);
+}
+
+function deletePO(id) {
+    if (!confirm('هل أنت متأكد من حذف أمر الشراء؟')) return;
+    appData.purchaseOrders = (appData.purchaseOrders || []).filter(function(p) { return p.id !== id; });
+    saveData();
+    renderPurchaseOrders();
+    showToast('تم حذف أمر الشراء', 'success');
+}
+
+// ======================================================================
+// FEATURE 3: Doctor Management
+// ======================================================================
+function renderDoctors() {
+    var tbody = document.getElementById('doctorBody');
+    if (!tbody) return;
+    var doctors = appData.doctors || [];
+    tbody.innerHTML = '';
+    if (doctors.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center empty-state">لا يوجد أطباء</td></tr>';
+        return;
+    }
+    doctors.forEach(function(d) {
+        var invoiceCount = (appData.invoices || []).filter(function(inv) { return inv.prescription && inv.prescription.doctor === d.name; }).length;
+        var tr = document.createElement('tr');
+        tr.innerHTML = '\n            <td>' + d.id + '</td>\n            <td><strong>' + escapeHtml(d.name) + '</strong></td>\n            <td>' + escapeHtml(d.specialty || '') + '</td>\n            <td>' + escapeHtml(d.phone || '') + '</td>\n            <td>' + invoiceCount + ' وصفات</td>\n            <td>\n                <button class="btn btn-sm btn-primary" onclick="editDoctor(' + d.id + ')">تعديل</button>\n                <button class="btn btn-sm btn-danger" onclick="deleteDoctor(' + d.id + ')">حذف</button>\n            </td>\n        ';
+        tbody.appendChild(tr);
+    });
+}
+
+function showAddDoctor() {
+    document.getElementById('doctorEditId').value = '';
+    document.getElementById('doctorModalTitle').textContent = 'إضافة طبيب';
+    document.getElementById('doctorName').value = '';
+    document.getElementById('doctorSpecialty').value = '';
+    document.getElementById('doctorPhone').value = '';
+    document.getElementById('doctorEmail').value = '';
+    document.getElementById('doctorModal').style.display = 'block';
+}
+
+function editDoctor(id) {
+    var d = (appData.doctors || []).find(function(x) { return x.id === id; });
+    if (!d) return;
+    document.getElementById('doctorEditId').value = id;
+    document.getElementById('doctorModalTitle').textContent = 'تعديل طبيب';
+    document.getElementById('doctorName').value = d.name;
+    document.getElementById('doctorSpecialty').value = d.specialty || '';
+    document.getElementById('doctorPhone').value = d.phone || '';
+    document.getElementById('doctorEmail').value = d.email || '';
+    document.getElementById('doctorModal').style.display = 'block';
+}
+
+function saveDoctor() {
+    var id = document.getElementById('doctorEditId').value;
+    var name = document.getElementById('doctorName').value.trim();
+    var specialty = document.getElementById('doctorSpecialty').value.trim();
+    var phone = document.getElementById('doctorPhone').value.trim();
+    var email = document.getElementById('doctorEmail').value.trim();
+    if (!name) { showToast('الرجاء إدخال اسم الطبيب', 'warning'); return; }
+    if (id) {
+        var d = (appData.doctors || []).find(function(x) { return x.id === parseInt(id); });
+        if (d) { d.name = name; d.specialty = specialty; d.phone = phone; d.email = email; }
+    } else {
+        if (!appData.nextDoctorId) appData.nextDoctorId = 1;
+        if (!appData.doctors) appData.doctors = [];
+        appData.doctors.push({ id: appData.nextDoctorId++, name: name, specialty: specialty, phone: phone, email: email });
+    }
+    saveData();
+    renderDoctors();
+    document.getElementById('doctorModal').style.display = 'none';
+    showToast('تم حفظ الطبيب', 'success');
+    audit('doctor', id ? 'تعديل طبيب: ' + name : 'إضافة طبيب: ' + name);
+}
+
+function deleteDoctor(id) {
+    if (!confirm('هل أنت متأكد من حذف الطبيب؟')) return;
+    appData.doctors = (appData.doctors || []).filter(function(d) { return d.id !== id; });
+    saveData();
+    renderDoctors();
+    showToast('تم حذف الطبيب', 'success');
+}
+
+// ======================================================================
+// FEATURE 4: Customer Loyalty & Rewards
+// ======================================================================
+function getCustomerTier(points) {
+    var tiers = appData.settings.loyaltyTiers || [];
+    var best = tiers[0] || { name: 'عادي', minPoints: 0, discountPercent: 0, color: '#94a3b8' };
+    tiers.forEach(function(t) {
+        if (points >= (t.minPoints || 0) && (t.minPoints || 0) >= (best.minPoints || 0)) best = t;
+    });
+    return best;
+}
+
+function renderLoyalty() {
+    var tbody = document.getElementById('loyaltyBody');
+    if (!tbody) return;
+    var customers = (appData.customers || []).filter(function(c) { return c.points && c.points > 0; }).sort(function(a, b) { return (b.points || 0) - (a.points || 0); });
+    tbody.innerHTML = '';
+    if (customers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center empty-state">لا توجد نقاط للعملاء</td></tr>';
+        return;
+    }
+    customers.forEach(function(c) {
+        var tier = getCustomerTier(c.points || 0);
+        var tr = document.createElement('tr');
+        tr.innerHTML = '\n            <td><strong>' + escapeHtml(c.name) + '</strong></td>\n            <td>' + (c.points || 0) + '</td>\n            <td><span class="badge" style="background:' + (tier.color || '#94a3b8') + ';color:#fff;">' + escapeHtml(tier.name) + '</span></td>\n            <td>' + (tier.discountPercent || 0) + '%</td>\n            <td><button class="btn btn-sm btn-primary" onclick="redeemPoints(' + c.id + ')">استبدال</button></td>\n        ';
+        tbody.appendChild(tr);
+    });
+}
+
+function redeemPoints(customerId) {
+    var c = (appData.customers || []).find(function(cx) { return cx.id === customerId; });
+    if (!c || !c.points || c.points < 100) { showToast('النقاط غير كافية (الحد الأدنى 100 نقطة)', 'warning'); return; }
+    var rate = appData.settings.loyaltyRedeemRate || 100;
+    var value = Math.floor((c.points || 0) / rate);
+    if (!confirm('سيتم استبدال ' + c.points + ' نقطة بقيمة ' + value + ' ' + cur + ' للعميل ' + c.name + '. هل أنت متأكد؟')) return;
+    c.points -= value * rate;
+    saveData();
+    renderLoyalty();
+    showToast('تم استبدال النقاط بقيمة ' + value + ' ' + cur, 'success');
+    audit('loyalty', 'استبدال نقاط للعميل ' + c.name + ' بقيمة ' + value);
+}
+
+function loadLoyaltyTierSettings() {
+    var container = document.getElementById('loyaltyTierSettings');
+    if (!container) return;
+    var tiers = appData.settings.loyaltyTiers || [];
+    container.innerHTML = '';
+    tiers.forEach(function(t, i) {
+        var div = document.createElement('div');
+        div.className = 'tier-row';
+        div.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;align-items:center;';
+        div.innerHTML = '\n            <input class="form-input" style="width:100px;" value="' + escapeHtml(t.name) + '" placeholder="الاسم" data-tier="name" data-index="' + i + '">\n            <input class="form-input" style="width:70px;" type="number" value="' + (t.minPoints || 0) + '" placeholder="الحد الأدنى" data-tier="minPoints" data-index="' + i + '">\n            <input class="form-input" style="width:70px;" type="number" value="' + (t.discountPercent || 0) + '" placeholder="الخصم %" data-tier="discountPercent" data-index="' + i + '">\n            <input class="form-input" style="width:80px;" type="color" value="' + (t.color || '#94a3b8') + '" data-tier="color" data-index="' + i + '">\n            <button class="btn btn-sm btn-danger" onclick="removeTier(' + i + ')"><i class="fas fa-times"></i></button>\n        ';
+        container.appendChild(div);
+    });
+}
+
+function addTier() {
+    if (!appData.settings.loyaltyTiers) appData.settings.loyaltyTiers = [];
+    appData.settings.loyaltyTiers.push({ name: 'مستوى جديد', minPoints: 0, discountPercent: 0, color: '#6366f1' });
+    loadLoyaltyTierSettings();
+}
+
+function removeTier(index) {
+    appData.settings.loyaltyTiers.splice(index, 1);
+    loadLoyaltyTierSettings();
+}
+
+function saveLoyaltyTiers() {
+    var inputs = document.querySelectorAll('#loyaltyTierSettings [data-tier]');
+    var tiers = [];
+    var map = {};
+    inputs.forEach(function(inp) {
+        var field = inp.dataset.tier;
+        var idx = parseInt(inp.dataset.index);
+        if (!map[idx]) map[idx] = {};
+        map[idx][field] = inp.type === 'number' ? parseFloat(inp.value) || 0 : inp.value;
+    });
+    Object.keys(map).sort().forEach(function(k) { tiers.push(map[k]); });
+    appData.settings.loyaltyTiers = tiers;
+    saveData();
+    showToast('تم حفظ مستويات الولاء', 'success');
+}
+
+// ======================================================================
+// FEATURE 5: Receipt Customization (in settings)
+// ======================================================================
+function loadReceiptSettings() {
+    var s = appData.settings;
+    var els = {
+        'receiptHeader': s.receiptHeader || '',
+        'receiptFooter': s.receiptFooter || '',
+        'receiptShowLogo': s.receiptShowLogo ? 'checked' : '',
+        'receiptShowTax': s.receiptShowTax !== false ? 'checked' : '',
+        'receiptShowPoints': s.receiptShowPoints !== false ? 'checked' : '',
+        'receiptPaperSize': s.receiptPaperSize || '80mm'
+    };
+    Object.keys(els).forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) {
+            if (el.type === 'checkbox') el.checked = !!els[id];
+            else el.value = els[id];
+        }
+    });
+}
+
+function saveReceiptSettings() {
+    var s = appData.settings;
+    s.receiptHeader = document.getElementById('receiptHeader') ? document.getElementById('receiptHeader').value : '';
+    s.receiptFooter = document.getElementById('receiptFooter') ? document.getElementById('receiptFooter').value : '';
+    s.receiptShowLogo = document.getElementById('receiptShowLogo') ? document.getElementById('receiptShowLogo').checked : false;
+    s.receiptShowTax = document.getElementById('receiptShowTax') ? document.getElementById('receiptShowTax').checked : true;
+    s.receiptShowPoints = document.getElementById('receiptShowPoints') ? document.getElementById('receiptShowPoints').checked : true;
+    s.receiptPaperSize = document.getElementById('receiptPaperSize') ? document.getElementById('receiptPaperSize').value : '80mm';
+    saveData();
+    showToast('تم حفظ إعدادات الفاتورة', 'success');
+}
+
+// ======================================================================
+// FEATURE 6: Touch Mode
+// ======================================================================
+function toggleTouchMode() {
+    document.body.classList.toggle('touch-mode');
+    var isTouch = document.body.classList.contains('touch-mode');
+    localStorage.setItem('valopos_touch_mode', isTouch ? '1' : '0');
+    var btn = document.getElementById('touchModeBtn');
+    if (btn) btn.innerHTML = isTouch ? '<i class="fas fa-mouse"></i> وضع اللمس: نشط' : '<i class="fas fa-hand-pointer"></i> تفعيل وضع اللمس';
+    showToast(isTouch ? 'تم تفعيل وضع اللمس' : 'تم إلغاء وضع اللمس', 'info');
+}
+
+function loadTouchMode() {
+    if (localStorage.getItem('valopos_touch_mode') === '1') {
+        document.body.classList.add('touch-mode');
+        var btn = document.getElementById('touchModeBtn');
+        if (btn) btn.innerHTML = '<i class="fas fa-mouse"></i> وضع اللمس: نشط';
+    }
+}
+
+// ======================================================================
+// FEATURE 7: Quick Cashier Login (PIN)
+// ======================================================================
+function showQuickLogin() {
+    document.getElementById('quickLoginModal').style.display = 'block';
+    document.getElementById('quickPinInput').value = '';
+    document.getElementById('quickPinInput').focus();
+}
+
+function quickLogin() {
+    var pin = document.getElementById('quickPinInput').value.trim();
+    if (!pin) { showToast('الرجاء إدخال الرقم السري', 'warning'); return; }
+    var user = (appData.users || []).find(function(u) { return u.password === pin && u.role === 'cashier'; });
+    if (!user) { showToast('الرقم السري غير صحيح', 'error'); return; }
+    currentUser = user;
+    document.getElementById('quickLoginModal').style.display = 'none';
+    document.getElementById('headerAvatar').textContent = user.name.charAt(0);
+    document.querySelector('.sidebar-user-name').textContent = user.name + ' (كاشير)';
+    showToast('مرحباً ' + user.name, 'success');
+    audit('quick_login', 'تسجيل دخول سريع: ' + user.name);
+}
+
+// ======================================================================
+// FEATURE 8: Batch & Expiry Tracking (added to inventory)
+// ======================================================================
+function renderBatchInfo(medicineId) {
+    var med = getMedicineById(medicineId);
+    if (!med) return '';
+    return '<small style="color:#64748b;">الباتش: ' + escapeHtml(med.batchNumber || '-') + ' | الصلاحية: ' + (med.expiryDate || '-') + '</small>';
+}
+
+// ======================================================================
+// FEATURE 9: Reorder Point Alerts
+// ======================================================================
+function checkReorderAlerts() {
+    var lowMeds = medicinesDB.filter(function(m) { return m.reorderPoint && m.qty <= m.reorderPoint; });
+    if (lowMeds.length > 0 && lowMeds.length <= 5) {
+        lowMeds.forEach(function(m) {
+            showToast('تنبيه: ' + escapeHtml(m.name) + ' وصل لنقطة إعادة الطلب (' + m.qty + ' / ' + m.reorderPoint + ')', 'warning');
+        });
+    }
+}
+
+// ======================================================================
+// FEATURE 10: Sales Targets
+// ======================================================================
+function renderSalesTargets() {
+    var tbody = document.getElementById('targetBody');
+    if (!tbody) return;
+    var targets = appData.salesTargets || [];
+    tbody.innerHTML = '';
+    if (targets.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center empty-state">لا توجد أهداف مبيعات</td></tr>';
+        return;
+    }
+    targets.forEach(function(t) {
+        var targetDate = new Date(t.year || new Date().getFullYear(), (t.month || 1) - 1);
+        var monthName = targetDate.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' });
+        var achieved = (appData.invoices || []).filter(function(inv) {
+            var d = new Date(inv.date);
+            return d.getMonth() === targetDate.getMonth() && d.getFullYear() === targetDate.getFullYear() && inv.status !== 'ملغية';
+        }).reduce(function(s, inv) { return s + inv.net; }, 0);
+        var progress = t.target > 0 ? Math.min(100, Math.round(achieved / t.target * 100)) : 0;
+        var badge = progress >= 100 ? 'badge-success' : progress >= 50 ? 'badge-warning' : 'badge-danger';
+        var tr = document.createElement('tr');
+        tr.innerHTML = '\n            <td>' + escapeHtml(monthName) + '</td>\n            <td>' + formatPrice(t.target) + ' ' + cur + '</td>\n            <td>' + formatPrice(achieved) + ' ' + cur + '</td>\n            <td>\n                <div class="progress-bar" style="direction:ltr;">\n                    <div class="progress-fill" style="width:' + progress + '%;background:' + (progress >= 100 ? '#10b981' : progress >= 50 ? '#f59e0b' : '#ef4444') + ';"></div>\n                </div>\n                <small>' + progress + '%</small>\n            </td>\n            <td>\n                <button class="btn btn-sm btn-primary" onclick="editTarget(' + t.id + ')">تعديل</button>\n                <button class="btn btn-sm btn-danger" onclick="deleteTarget(' + t.id + ')">حذف</button>\n            </td>\n        ';
+        tbody.appendChild(tr);
+    });
+}
+
+function showAddTarget() {
+    document.getElementById('targetEditId').value = '';
+    document.getElementById('targetModalTitle').textContent = 'إضافة هدف';
+    document.getElementById('targetMonth').value = new Date().getMonth() + 1;
+    document.getElementById('targetYear').value = new Date().getFullYear();
+    document.getElementById('targetAmount').value = '';
+    document.getElementById('targetModal').style.display = 'block';
+}
+
+function editTarget(id) {
+    var t = (appData.salesTargets || []).find(function(x) { return x.id === id; });
+    if (!t) return;
+    document.getElementById('targetEditId').value = id;
+    document.getElementById('targetModalTitle').textContent = 'تعديل هدف';
+    document.getElementById('targetMonth').value = t.month;
+    document.getElementById('targetYear').value = t.year;
+    document.getElementById('targetAmount').value = t.target;
+    document.getElementById('targetModal').style.display = 'block';
+}
+
+function saveTarget() {
+    var id = document.getElementById('targetEditId').value;
+    var month = parseInt(document.getElementById('targetMonth').value) || 1;
+    var year = parseInt(document.getElementById('targetYear').value) || new Date().getFullYear();
+    var target = parseFloat(document.getElementById('targetAmount').value) || 0;
+    if (target <= 0) { showToast('الرجاء إدخال قيمة الهدف', 'warning'); return; }
+    if (id) {
+        var t = (appData.salesTargets || []).find(function(x) { return x.id === parseInt(id); });
+        if (t) { t.month = month; t.year = year; t.target = target; }
+    } else {
+        if (!appData.nextSalesTargetId) appData.nextSalesTargetId = 1;
+        if (!appData.salesTargets) appData.salesTargets = [];
+        appData.salesTargets.push({ id: appData.nextSalesTargetId++, month: month, year: year, target: target });
+    }
+    saveData();
+    renderSalesTargets();
+    document.getElementById('targetModal').style.display = 'none';
+    showToast('تم حفظ الهدف', 'success');
+}
+
+function deleteTarget(id) {
+    if (!confirm('حذف الهدف؟')) return;
+    appData.salesTargets = (appData.salesTargets || []).filter(function(t) { return t.id !== id; });
+    saveData();
+    renderSalesTargets();
+    showToast('تم حذف الهدف', 'success');
+}
+
+// ======================================================================
+// FEATURE 11: System Health Dashboard
+// ======================================================================
+function renderSystemHealth() {
+    var panel = document.getElementById('systemHealthPanel');
+    if (!panel) return;
+    var dbSize = new Blob([JSON.stringify(appData)]).size;
+    var medsSize = new Blob([JSON.stringify(medicinesDB)]).size;
+    var totalSize = dbSize + medsSize;
+    var sizeStr = totalSize > 1048576 ? (totalSize / 1048576).toFixed(1) + ' MB' : totalSize > 1024 ? (totalSize / 1024).toFixed(1) + ' KB' : totalSize + ' B';
+    var invCount = (appData.invoices || []).length;
+    var medCount = medicinesDB.length;
+    var userCount = (appData.users || []).length;
+    var lastBackup = localStorage.getItem('valopos_last_backup') || 'لم يتم';
+    var healthScore = 100;
+    var issues = [];
+    if (medCount === 0) { healthScore -= 15; issues.push('لا توجد أدوية في قاعدة البيانات'); }
+    if (invCount === 0) { healthScore -= 5; issues.push('لا توجد فواتير'); }
+    var expCount = medicinesDB.filter(function(m) { var d = getExpiryDays(m.expiryDate); return d !== null && d >= 0 && d <= 7; }).length;
+    if (expCount > 0) { healthScore -= expCount * 2; issues.push(expCount + ' دواء منتهي الصلاحية'); }
+    var lowCount = medicinesDB.filter(function(m) { return m.qty <= 10 && m.qty > 0; }).length;
+    if (lowCount > 5) { healthScore -= 10; issues.push(lowCount + ' دواء منخفض المخزون'); }
+    healthScore = Math.max(0, healthScore);
+    var healthColor = healthScore >= 80 ? '#10b981' : healthScore >= 50 ? '#f59e0b' : '#ef4444';
+    var html = '<div class="health-card" style="border-right:4px solid ' + healthColor + ';">';
+    html += '<div class="health-score" style="color:' + healthColor + ';">' + healthScore + '%</div>';
+    html += '<div class="health-label">صحة النظام</div></div>';
+    html += '<div class="health-stats">';
+    html += '<div class="health-stat"><span class="health-stat-label">حجم البيانات</span><span>' + sizeStr + '</span></div>';
+    html += '<div class="health-stat"><span class="health-stat-label">إجمالي الفواتير</span><span>' + invCount + '</span></div>';
+    html += '<div class="health-stat"><span class="health-stat-label">إجمالي الأدوية</span><span>' + medCount + '</span></div>';
+    html += '<div class="health-stat"><span class="health-stat-label">المستخدمين</span><span>' + userCount + '</span></div>';
+    html += '<div class="health-stat"><span class="health-stat-label">آخر نسخة احتياطية</span><span>' + escapeHtml(lastBackup) + '</span></div>';
+    html += '</div>';
+    if (issues.length > 0) {
+        html += '<div class="health-issues"><h5>المشاكل:</h5><ul>';
+        issues.forEach(function(issue) { html += '<li style="color:#ef4444;">' + escapeHtml(issue) + '</li>'; });
+        html += '</ul></div>';
+    }
+    panel.innerHTML = html;
+}
+
+// ======================================================================
+// FEATURE 12: Onboarding / Welcome Wizard
+// ======================================================================
+function showOnboarding() {
+    var seen = localStorage.getItem('valopos_onboarding_seen');
+    if (seen) return;
+    document.getElementById('onboardingModal').style.display = 'block';
+}
+
+function completeOnboarding() {
+    localStorage.setItem('valopos_onboarding_seen', '1');
+    document.getElementById('onboardingModal').style.display = 'none';
+    appData.settings.pharmacyName = document.getElementById('onboardName').value.trim() || 'ValoPOS';
+    appData.settings.address = document.getElementById('onboardAddress').value.trim() || '';
+    appData.settings.phone = document.getElementById('onboardPhone').value.trim() || '';
+    saveData();
+    showToast('مرحباً بك في ValoPOS! تم حفظ الإعدادات.', 'success');
+}
+
+// ======================================================================
+// FEATURE 13: CSV/Excel Import
+// ======================================================================
+function showImportModal() {
+    document.getElementById('importModal').style.display = 'block';
+    document.getElementById('importFile').value = '';
+    document.getElementById('importPreview').innerHTML = '';
+    document.getElementById('importStatus').textContent = '';
+}
+
+function previewImport() {
+    var fileInput = document.getElementById('importFile');
+    var file = fileInput.files[0];
+    if (!file) { showToast('الرجاء اختيار ملف', 'warning'); return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var text = e.target.result;
+        var lines = text.split('\n').filter(function(l) { return l.trim(); });
+        if (lines.length < 2) { showToast('الملف فارغ أو غير صالح', 'error'); return; }
+        var headers = lines[0].split(',').map(function(h) { return h.trim().replace(/"/g, ''); });
+        var preview = document.getElementById('importPreview');
+        var html = '<table class="table"><thead><tr>';
+        headers.forEach(function(h) { html += '<th>' + escapeHtml(h) + '</th>'; });
+        html += '</tr></thead><tbody>';
+        for (var i = 1; i < Math.min(lines.length, 6); i++) {
+            html += '<tr>';
+            var cols = lines[i].split(',').map(function(c) { return c.trim().replace(/"/g, ''); });
+            cols.forEach(function(c) { html += '<td>' + escapeHtml(c) + '</td>'; });
+            html += '</tr>';
+        }
+        html += '</tbody></table>';
+        html += '<p style="margin-top:8px;">سيتم استيراد ' + (lines.length - 1) + ' صف</p>';
+        preview.innerHTML = html;
+        document.getElementById('importStatus').textContent = 'جاهز للاستيراد';
+    };
+    reader.readAsText(file);
+}
+
+function doImport() {
+    var fileInput = document.getElementById('importFile');
+    var type = document.getElementById('importType').value;
+    var file = fileInput.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var text = e.target.result;
+        if (type === 'medicines') {
+            var lines = text.split('\n').filter(function(l) { return l.trim(); });
+            for (var i = 1; i < lines.length; i++) {
+                var cols = lines[i].split(',').map(function(c) { return c.trim().replace(/"/g, ''); });
+                if (cols.length < 3) continue;
+                var nextId = medicinesDB.length > 0 ? Math.max.apply(Math, medicinesDB.map(function(m) { return m.id; })) + 1 : 1;
+                var existing = medicinesDB.find(function(m) { return m.barcode === cols[0] || m.name === cols[1]; });
+                if (existing) {
+                    existing.qty = (existing.qty || 0) + (parseInt(cols[3]) || 0);
+                    existing.price = parseFloat(cols[4]) || existing.price;
+                } else {
+                    medicinesDB.push({
+                        id: nextId, name: cols[1] || cols[0], scientificName: cols[2] || '',
+                        category: cols[5] || 'عام', price: parseFloat(cols[4]) || 0,
+                        buyPrice: parseFloat(cols[6]) || 0, qty: parseInt(cols[3]) || 0,
+                        expiryDate: cols[7] || '', barcode: cols[0] || '',
+                        rx: cols[8] === 'rx' || cols[8] === 'true', schedule: cols[9] || 'normal',
+                        reorderPoint: parseInt(cols[10]) || 0, batchNumber: cols[11] || ''
+                    });
+                }
+            }
+            saveMeds();
+            showToast('تم استيراد الأدوية بنجاح', 'success');
+        } else if (type === 'customers') {
+            var lines = text.split('\n').filter(function(l) { return l.trim(); });
+            for (var i = 1; i < lines.length; i++) {
+                var cols = lines[i].split(',').map(function(c) { return c.trim().replace(/"/g, ''); });
+                if (cols.length < 1) continue;
+                if (!appData.nextCustomerId) appData.nextCustomerId = (appData.customers || []).length + 1;
+                appData.customers.push({
+                    id: appData.nextCustomerId++, name: cols[0], phone: cols[1] || '',
+                    email: cols[2] || '', address: cols[3] || '',
+                    points: parseInt(cols[4]) || 0, totalSpent: parseFloat(cols[5]) || 0,
+                    createdAt: new Date().toISOString()
+                });
+            }
+            saveData();
+            showToast('تم استيراد العملاء بنجاح', 'success');
+        }
+        document.getElementById('importModal').style.display = 'none';
+        if (type === 'medicines') renderInventory();
+        if (type === 'customers') renderCustomers();
+        audit('import', 'استيراد بيانات من CSV');
+    };
+    reader.readAsText(file);
+}
+
+// ======================================================================
+// FEATURE 14: Gift Cards & Coupons
+// ======================================================================
+function renderGiftCards() {
+    var tbody = document.getElementById('giftCardBody');
+    if (!tbody) return;
+    var cards = appData.giftCards || [];
+    tbody.innerHTML = '';
+    if (cards.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center empty-state">لا توجد بطاقات هدايا</td></tr>';
+        return;
+    }
+    cards.forEach(function(c) {
+        var badge = c.status === 'نشطة' ? 'badge-success' : c.status === 'منتهية' ? 'badge-danger' : 'badge-warning';
+        var tr = document.createElement('tr');
+        tr.innerHTML = '\n            <td>#' + c.id + '</td>\n            <td>' + escapeHtml(c.code) + '</td>\n            <td>' + formatPrice(c.balance) + ' ' + cur + '</td>\n            <td>' + formatDate(c.expiryDate) + '</td>\n            <td><span class="badge ' + badge + '">' + escapeHtml(c.status) + '</span></td>\n            <td><button class="btn btn-sm btn-danger" onclick="deleteGiftCard(' + c.id + ')">حذف</button></td>\n        ';
+        tbody.appendChild(tr);
+    });
+}
+
+function showAddGiftCard() {
+    document.getElementById('giftCardEditId').value = '';
+    document.getElementById('giftCardModalTitle').textContent = 'إضافة بطاقة هدايا';
+    document.getElementById('giftCardCode').value = 'GIFT-' + Date.now().toString(36).toUpperCase();
+    document.getElementById('giftCardBalance').value = '';
+    document.getElementById('giftCardExpiry').value = '';
+    document.getElementById('giftCardModal').style.display = 'block';
+}
+
+function saveGiftCard() {
+    var code = document.getElementById('giftCardCode').value.trim();
+    var balance = parseFloat(document.getElementById('giftCardBalance').value) || 0;
+    var expiryDate = document.getElementById('giftCardExpiry').value;
+    if (!code) { showToast('الرجاء إدخال كود البطاقة', 'warning'); return; }
+    if (balance <= 0) { showToast('الرجاء إدخال رصيد صحيح', 'warning'); return; }
+    if (!appData.nextGiftCardId) appData.nextGiftCardId = 1;
+    if (!appData.giftCards) appData.giftCards = [];
+    appData.giftCards.push({ id: appData.nextGiftCardId++, code: code, balance: balance, initialBalance: balance, expiryDate: expiryDate, status: 'نشطة', createdAt: new Date().toISOString() });
+    saveData();
+    renderGiftCards();
+    document.getElementById('giftCardModal').style.display = 'none';
+    showToast('تم إضافة بطاقة الهدايا', 'success');
+}
+
+function deleteGiftCard(id) {
+    if (!confirm('حذف بطاقة الهدايا؟')) return;
+    appData.giftCards = (appData.giftCards || []).filter(function(c) { return c.id !== id; });
+    saveData();
+    renderGiftCards();
+    showToast('تم الحذف', 'success');
+}
+
+function renderCoupons() {
+    var tbody = document.getElementById('couponBody');
+    if (!tbody) return;
+    var coupons = appData.coupons || [];
+    tbody.innerHTML = '';
+    if (coupons.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center empty-state">لا توجد كوبونات خصم</td></tr>';
+        return;
+    }
+    coupons.forEach(function(c) {
+        var badge = c.status === 'نشط' ? 'badge-success' : 'badge-danger';
+        var tr = document.createElement('tr');
+        tr.innerHTML = '\n            <td>#' + c.id + '</td>\n            <td>' + escapeHtml(c.code) + '</td>\n            <td>' + (c.type === 'percent' ? c.value + '%' : formatPrice(c.value) + ' ' + cur) + '</td>\n            <td>' + formatPrice(c.minPurchase || 0) + ' ' + cur + '</td>\n            <td><span class="badge ' + badge + '">' + escapeHtml(c.status || 'نشط') + '</span></td>\n            <td><button class="btn btn-sm btn-danger" onclick="deleteCoupon(' + c.id + ')">حذف</button></td>\n        ';
+        tbody.appendChild(tr);
+    });
+}
+
+function showAddCoupon() {
+    document.getElementById('couponEditId').value = '';
+    document.getElementById('couponModalTitle').textContent = 'إضافة كوبون خصم';
+    document.getElementById('couponCode').value = '';
+    document.getElementById('couponType').value = 'percent';
+    document.getElementById('couponValue').value = '';
+    document.getElementById('couponMinPurchase').value = '';
+    document.getElementById('couponModal').style.display = 'block';
+}
+
+function saveCoupon() {
+    var code = document.getElementById('couponCode').value.trim();
+    var type = document.getElementById('couponType').value;
+    var value = parseFloat(document.getElementById('couponValue').value) || 0;
+    var minPurchase = parseFloat(document.getElementById('couponMinPurchase').value) || 0;
+    if (!code) { showToast('الرجاء إدخال كود الكوبون', 'warning'); return; }
+    if (value <= 0) { showToast('الرجاء إدخال قيمة صحيحة', 'warning'); return; }
+    if (!appData.nextCouponId) appData.nextCouponId = 1;
+    if (!appData.coupons) appData.coupons = [];
+    appData.coupons.push({ id: appData.nextCouponId++, code: code, type: type, value: value, minPurchase: minPurchase, status: 'نشط', createdAt: new Date().toISOString() });
+    saveData();
+    renderCoupons();
+    document.getElementById('couponModal').style.display = 'none';
+    showToast('تم إضافة الكوبون', 'success');
+}
+
+function deleteCoupon(id) {
+    if (!confirm('حذف الكوبون؟')) return;
+    appData.coupons = (appData.coupons || []).filter(function(c) { return c.id !== id; });
+    saveData();
+    renderCoupons();
+    showToast('تم الحذف', 'success');
+}
+
+// ======================================================================
+// FEATURE 15: Compounds (Pre-made Medicine Kits)
+// ======================================================================
+function renderCompounds() {
+    var tbody = document.getElementById('compoundBody');
+    if (!tbody) return;
+    var compounds = appData.compounds || [];
+    tbody.innerHTML = '';
+    if (compounds.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center empty-state">لا توجد تركيبات</td></tr>';
+        return;
+    }
+    compounds.forEach(function(c) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '\n            <td>' + c.id + '</td>\n            <td><strong>' + escapeHtml(c.name) + '</strong></td>\n            <td>' + (c.ingredients || []).length + ' مكونات</td>\n            <td>' + formatPrice(c.totalCost || 0) + ' ' + cur + '</td>\n            <td>\n                <button class="btn btn-sm btn-primary" onclick="viewCompound(' + c.id + ')">عرض</button>\n                <button class="btn btn-sm btn-success" onclick="sellCompound(' + c.id + ')">بيع</button>\n                <button class="btn btn-sm btn-danger" onclick="deleteCompound(' + c.id + ')">حذف</button>\n            </td>\n        ';
+        tbody.appendChild(tr);
+    });
+}
+
+function showAddCompound() {
+    document.getElementById('compoundEditId').value = '';
+    document.getElementById('compoundModalTitle').textContent = 'إضافة تركيبة';
+    document.getElementById('compoundName').value = '';
+    document.getElementById('compoundPrice').value = '';
+    document.getElementById('compoundIngredientsContainer').innerHTML = '';
+    addCompoundIngredient();
+    document.getElementById('compoundModal').style.display = 'block';
+}
+
+function addCompoundIngredient() {
+    var container = document.getElementById('compoundIngredientsContainer');
+    var div = document.createElement('div');
+    div.className = 'compound-ing-row';
+    div.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;align-items:center;';
+    var select = document.createElement('select');
+    select.className = 'form-input';
+    select.style.cssText = 'flex:1;';
+    select.innerHTML = '<option value="">اختر دواء</option>';
+    medicinesDB.forEach(function(m) {
+        select.innerHTML += '<option value="' + m.id + '">' + escapeHtml(m.name) + ' (متوفر: ' + m.qty + ')</option>';
+    });
+    var qtyInput = document.createElement('input');
+    qtyInput.type = 'number';
+    qtyInput.className = 'form-input';
+    qtyInput.style.cssText = 'width:70px;';
+    qtyInput.placeholder = 'الكمية';
+    qtyInput.min = 1;
+    qtyInput.value = 1;
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn btn-sm btn-danger';
+    removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+    removeBtn.addEventListener('click', function() { div.remove(); });
+    div.appendChild(select);
+    div.appendChild(qtyInput);
+    div.appendChild(removeBtn);
+    container.appendChild(div);
+}
+
+function saveCompound() {
+    var name = document.getElementById('compoundName').value.trim();
+    var price = parseFloat(document.getElementById('compoundPrice').value) || 0;
+    if (!name) { showToast('الرجاء إدخال اسم التركيبة', 'warning'); return; }
+    var ingRows = document.querySelectorAll('#compoundIngredientsContainer > div');
+    var ingredients = [];
+    var totalCost = 0;
+    ingRows.forEach(function(row) {
+        var sel = row.querySelector('select');
+        var inp = row.querySelector('input');
+        if (!sel || !inp) return;
+        var medId = parseInt(sel.value);
+        var qty = parseInt(inp.value) || 0;
+        if (!medId || qty <= 0) return;
+        var med = getMedicineById(medId);
+        var cost = med ? (med.buyPrice || med.price || 0) * qty : 0;
+        ingredients.push({ medicineId: medId, medicineName: med ? med.name : '', qty: qty, cost: cost });
+        totalCost += cost;
+    });
+    if (ingredients.length === 0) { showToast('الرجاء إضافة مكون واحد على الأقل', 'warning'); return; }
+    if (!appData.nextCompoundId) appData.nextCompoundId = 1;
+    if (!appData.compounds) appData.compounds = [];
+    appData.compounds.push({ id: appData.nextCompoundId++, name: name, price: price || totalCost * 1.3, ingredients: ingredients, totalCost: totalCost, createdAt: new Date().toISOString() });
+    saveData();
+    renderCompounds();
+    document.getElementById('compoundModal').style.display = 'none';
+    showToast('تم إضافة التركيبة', 'success');
+    audit('compound', 'إضافة تركيبة: ' + name);
+}
+
+function viewCompound(id) {
+    var c = (appData.compounds || []).find(function(x) { return x.id === id; });
+    if (!c) return;
+    var html = '<div class="detail-card"><h4>' + escapeHtml(c.name) + '</h4>';
+    html += '<p>سعر البيع: ' + formatPrice(c.price) + ' ' + cur + '</p>';
+    html += '<p>تكلفة المكونات: ' + formatPrice(c.totalCost || 0) + ' ' + cur + '</p>';
+    html += '<p>الربح: ' + formatPrice((c.price || 0) - (c.totalCost || 0)) + ' ' + cur + '</p>';
+    html += '<h5>المكونات:</h5><table class="table"><thead><tr><th>الصنف</th><th>الكمية</th><th>التكلفة</th></tr></thead><tbody>';
+    (c.ingredients || []).forEach(function(ing) {
+        html += '<tr><td>' + escapeHtml(ing.medicineName || '') + '</td><td>' + ing.qty + '</td><td>' + formatPrice(ing.cost || 0) + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+    document.getElementById('compoundDetailContent').innerHTML = html;
+    document.getElementById('compoundDetailModal').style.display = 'block';
+}
+
+function sellCompound(id) {
+    var c = (appData.compounds || []).find(function(x) { return x.id === id; });
+    if (!c) return;
+    var canMake = true;
+    (c.ingredients || []).forEach(function(ing) {
+        var med = getMedicineById(ing.medicineId);
+        if (!med || med.qty < ing.qty) canMake = false;
+    });
+    if (!canMake) { showToast('المكونات غير كافية لتحضير هذه التركيبة', 'error'); return; }
+    (c.ingredients || []).forEach(function(ing) {
+        var med = getMedicineById(ing.medicineId);
+        if (med) med.qty = Math.max(0, med.qty - ing.qty);
+    });
+    var invoice = {
+        id: appData.nextInvoiceId++,
+        date: new Date().toISOString(),
+        items: [{ id: 'compound_' + c.id, name: c.name + ' (تركيبة)', qty: 1, price: c.price, total: c.price }],
+        subtotal: c.price, discount: 0, tax: 0, net: c.price, paid: c.price, change: 0,
+        customerId: null, status: 'مكتملة', paymentMethod: 'cash', splitAmount: 0
+    };
+    appData.invoices.push(invoice);
+    saveData();
+    saveMeds();
+    renderCompounds();
+    showToast('تم بيع التركيبة ' + escapeHtml(c.name), 'success');
+    audit('compound_sale', 'بيع تركيبة: ' + c.name + ' بقيمة ' + formatPrice(c.price));
+}
+
+function deleteCompound(id) {
+    if (!confirm('حذف التركيبة؟')) return;
+    appData.compounds = (appData.compounds || []).filter(function(c) { return c.id !== id; });
+    saveData();
+    renderCompounds();
+    showToast('تم الحذف', 'success');
+}
+
+// ======================================================================
+// FEATURE 16: Dashboard Customization
+// ======================================================================
+function saveWidgetSettings() {
+    var widgets = appData.settings.dashboardWidgets || {};
+    var checkboxIds = {
+        widgetRecentSales: 'recentSales',
+        widgetTopMeds: 'topMeds',
+        widgetExpiryAlerts: 'expiryAlerts',
+        widgetLowStock: 'lowStockAlerts',
+        widgetTodayStats: 'todayStats',
+        widgetProfitChart: 'profitChart',
+        widgetTargetProgress: 'targetProgress',
+        widgetDoctorRx: 'doctorPrescriptions'
+    };
+    Object.keys(checkboxIds).forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) widgets[checkboxIds[id]] = el.checked;
+    });
+    appData.settings.dashboardWidgets = widgets;
+    saveData();
+    showToast('تم حفظ إعدادات لوحة التحكم', 'success');
+}
+
+function updateDashboardWidgets() {
+    var w = appData.settings.dashboardWidgets || {};
+    var widgetMap = {
+        recentSalesWidget: w.recentSales,
+        topMedsWidget: w.topMeds,
+        expiryAlertWidget: w.expiryAlerts,
+        lowStockWidget: w.lowStockAlerts,
+        todayStatsWidget: w.todayStats,
+        profitChartWidget: w.profitChart,
+        targetProgressWidget: w.targetProgress,
+        doctorRxWidget: w.doctorPrescriptions
+    };
+    Object.keys(widgetMap).forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = widgetMap[id] !== false ? '' : 'none';
+    });
+}
+
+// Wrap renderDashboard for widget visibility
+(function() {
+    var orig = renderDashboard;
+    renderDashboard = function() {
+        updateDashboardWidgets();
+        orig();
+        var w = appData.settings.dashboardWidgets || {};
+        if (w.targetProgress !== false) {
+            var now = new Date();
+            var targets = (appData.salesTargets || []).filter(function(t) { return t.year === now.getFullYear() && t.month === (now.getMonth() + 1); });
+            if (targets.length > 0) {
+                var tgt = targets[0].target || 0;
+                var achieved = (appData.invoices || []).filter(function(inv) {
+                    var d = new Date(inv.date);
+                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && inv.status !== 'ملغية';
+                }).reduce(function(s, inv) { return s + inv.net; }, 0);
+                var pct = tgt > 0 ? Math.min(100, Math.round(achieved / tgt * 100)) : 0;
+                var pf = document.getElementById('targetProgressFill');
+                var pt = document.getElementById('targetProgressText');
+                if (pf) pf.style.width = pct + '%';
+                if (pt) pt.textContent = pct + '% (' + formatPrice(achieved) + ' / ' + formatPrice(tgt) + ' ' + cur + ')';
+            } else {
+                var pt = document.getElementById('targetProgressText');
+                if (pt) pt.textContent = 'لا يوجد هدف للشهر الحالي';
+            }
+        }
+        if (w.doctorPrescriptions !== false) {
+            var tbody = document.getElementById('rxWidgetBody');
+            if (tbody) {
+                var rxInvs = (appData.invoices || []).filter(function(inv) { return inv.prescription && inv.prescription.doctor; }).slice(-10).reverse();
+                if (rxInvs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" class="empty-state text-center">لا توجد وصفات حديثة</td></tr>';
+                } else {
+                    tbody.innerHTML = '';
+                    rxInvs.forEach(function(inv) {
+                        var tr = document.createElement('tr');
+                        tr.innerHTML = '<td>#' + inv.id + '</td><td>' + escapeHtml(inv.prescription.doctor) + '</td><td>' + formatDate(inv.date) + '</td>';
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+        }
+        renderSystemHealth();
+    };
+})();
+
+// ======================================================================
+// FEATURE 17: Archive / Purge Old Data
+// ======================================================================
+function showArchiveModal() {
+    document.getElementById('archiveModal').style.display = 'block';
+}
+
+function doArchive() {
+    var days = parseInt(document.getElementById('archiveDays').value) || 365;
+    var cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    var cutoffStr = cutoff.toISOString();
+    var oldInvoices = (appData.invoices || []).filter(function(inv) { return inv.date < cutoffStr && inv.status === 'مكتملة'; });
+    if (oldInvoices.length === 0) { showToast('لا توجد فواتير قديمة للأرشفة', 'info'); return; }
+    if (!confirm('سيتم أرشفة ' + oldInvoices.length + ' فاتورة. هل أنت متأكد؟')) return;
+    appData.archived = appData.archived || { invoices: [] };
+    oldInvoices.forEach(function(inv) { appData.archived.invoices.push(inv); });
+    appData.invoices = (appData.invoices || []).filter(function(inv) { return inv.date >= cutoffStr || inv.status !== 'مكتملة'; });
+    saveData();
+    document.getElementById('archiveModal').style.display = 'none';
+    showToast('تم أرشفة ' + oldInvoices.length + ' فاتورة', 'success');
+    renderDashboard();
+    audit('archive', 'أرشفة ' + oldInvoices.length + ' فاتورة أقدم من ' + days + ' يوم');
+}
+
+function showPurgeModal() {
+    document.getElementById('purgeModal').style.display = 'block';
+}
+
+function doPurge() {
+    if (!confirm('سيتم حذف جميع البيانات بشكل دائم! هل أنت متأكد؟')) return;
+    if (!confirm('تأكيد نهائي: لا يمكن التراجع عن هذا الإجراء!')) return;
+    localStorage.removeItem('pharmacy_pos_data');
+    localStorage.removeItem('pharmacy_pos_meds');
+    localStorage.removeItem('pharmacy_pos_data_backup');
+    location.reload();
+}
+
+// ======================================================================
+// FEATURE 18: Announcements Banner
+// ======================================================================
+function renderAnnouncements() {
+    var container = document.getElementById('announcementsContainer');
+    if (!container) return;
+    var announcements = appData.announcements || [];
+    if (announcements.length === 0) {
+        container.innerHTML = '<div class="empty-state" style="padding:20px;"><div class="empty-state-text">لا توجد إعلانات</div></div>';
+        return;
+    }
+    container.innerHTML = '';
+    announcements.slice().reverse().forEach(function(a) {
+        var div = document.createElement('div');
+        div.className = 'announcement-card';
+        var icon = a.type === 'important' ? '🔴' : a.type === 'info' ? '🔵' : '🟢';
+        div.innerHTML = '\n            <div class="announcement-icon">' + icon + '</div>\n            <div class="announcement-content">\n                <div class="announcement-title">' + escapeHtml(a.title) + '</div>\n                <div class="announcement-body">' + escapeHtml(a.body) + '</div>\n                <div class="announcement-date">' + formatDate(a.date) + '</div>\n            </div>\n            <button class="btn btn-sm btn-danger" onclick="deleteAnnouncement(' + a.id + ')"><i class="fas fa-times"></i></button>\n        ';
+        container.appendChild(div);
+    });
+    var banner = document.getElementById('announcementBanner');
+    if (banner && announcements.length > 0) {
+        var latest = announcements[announcements.length - 1];
+        banner.innerHTML = '<span>' + escapeHtml(latest.title) + ': ' + escapeHtml(latest.body) + '</span>';
+        banner.style.display = 'flex';
+    }
+}
+
+function showAddAnnouncement() {
+    document.getElementById('announcementModal').style.display = 'block';
+    document.getElementById('announcementTitle').value = '';
+    document.getElementById('announcementBody').value = '';
+    document.getElementById('announcementType').value = 'info';
+}
+
+function saveAnnouncement() {
+    var title = document.getElementById('announcementTitle').value.trim();
+    var body = document.getElementById('announcementBody').value.trim();
+    var type = document.getElementById('announcementType').value;
+    if (!title || !body) { showToast('الرجاء إدخال العنوان والمحتوى', 'warning'); return; }
+    if (!appData.announcements) appData.announcements = [];
+    var nextId = appData.announcements.length > 0 ? Math.max.apply(Math, appData.announcements.map(function(a) { return a.id; })) + 1 : 1;
+    appData.announcements.push({ id: nextId, title: title, body: body, type: type, date: new Date().toISOString() });
+    saveData();
+    renderAnnouncements();
+    document.getElementById('announcementModal').style.display = 'none';
+    showToast('تم إضافة الإعلان', 'success');
+}
+
+function deleteAnnouncement(id) {
+    if (!confirm('حذف الإعلان؟')) return;
+    appData.announcements = (appData.announcements || []).filter(function(a) { return a.id !== id; });
+    saveData();
+    renderAnnouncements();
+    showToast('تم الحذف', 'success');
+}
+
+// ======================================================================
+// FEATURE 19: Supplier Price Lists
+// ======================================================================
+function renderSupplierPrices() {
+    var tbody = document.getElementById('supplierPriceBody');
+    if (!tbody) return;
+    var prices = appData.supplierPrices || [];
+    var supFilter = document.getElementById('spSupplierFilter');
+    if (supFilter && supFilter.value) prices = prices.filter(function(p) { return p.supplierId === parseInt(supFilter.value); });
+    tbody.innerHTML = '';
+    if (prices.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center empty-state">لا توجد أسعار موردين</td></tr>';
+        return;
+    }
+    prices.forEach(function(p) {
+        var supName = '';
+        var sup = (appData.suppliers || []).find(function(s) { return s.id === p.supplierId; });
+        if (sup) supName = sup.name;
+        var tr = document.createElement('tr');
+        tr.innerHTML = '\n            <td>' + escapeHtml(supName) + '</td>\n            <td>' + escapeHtml(p.medicineName || '') + '</td>\n            <td>' + formatPrice(p.price) + ' ' + cur + '</td>\n            <td>' + formatDate(p.date) + '</td>\n            <td><button class="btn btn-sm btn-danger" onclick="deleteSupplierPrice(' + p.id + ')">حذف</button></td>\n        ';
+        tbody.appendChild(tr);
+    });
+}
+
+function showAddSupplierPrice() {
+    document.getElementById('spModal').style.display = 'block';
+    document.getElementById('spMedicineName').value = '';
+    document.getElementById('spPrice').value = '';
+    var supSelect = document.getElementById('spSupplier');
+    supSelect.innerHTML = '<option value="">اختر المورد</option>';
+    (appData.suppliers || []).forEach(function(s) {
+        supSelect.innerHTML += '<option value="' + s.id + '">' + escapeHtml(s.name) + '</option>';
+    });
+    var medSelect = document.getElementById('spMedicine');
+    medSelect.innerHTML = '<option value="">اختر دواء</option>';
+    medicinesDB.forEach(function(m) {
+        medSelect.innerHTML += '<option value="' + m.id + '" data-name="' + escapeHtml(m.name) + '">' + escapeHtml(m.name) + '</option>';
+    });
+}
+
+function spSelectMedicine() {
+    var select = document.getElementById('spMedicine');
+    var name = select.options[select.selectedIndex] ? select.options[select.selectedIndex].dataset.name : '';
+    document.getElementById('spMedicineName').value = name || '';
+}
+
+function saveSupplierPrice() {
+    var supplierId = parseInt(document.getElementById('spSupplier').value);
+    var medicineId = parseInt(document.getElementById('spMedicine').value);
+    var price = parseFloat(document.getElementById('spPrice').value) || 0;
+    if (!supplierId || !medicineId || price <= 0) { showToast('الرجاء إكمال البيانات', 'warning'); return; }
+    var med = getMedicineById(medicineId);
+    if (!appData.supplierPrices) appData.supplierPrices = [];
+    appData.supplierPrices.push({
+        id: (appData.supplierPrices.length || 0) + 1,
+        supplierId: supplierId, medicineId: medicineId,
+        medicineName: med ? med.name : '',
+        price: price, date: new Date().toISOString()
+    });
+    saveData();
+    renderSupplierPrices();
+    document.getElementById('spModal').style.display = 'none';
+    showToast('تم إضافة سعر المورد', 'success');
+}
+
+function deleteSupplierPrice(id) {
+    if (!confirm('حذف سعر المورد؟')) return;
+    appData.supplierPrices = (appData.supplierPrices || []).filter(function(p) { return p.id !== id; });
+    saveData();
+    renderSupplierPrices();
+    showToast('تم الحذف', 'success');
+}
+
+// ======================================================================
+// FEATURE 20: Multi-Currency
+// ======================================================================
+function renderCurrencies() {
+    var tbody = document.getElementById('currencyBody');
+    if (!tbody) return;
+    var currencies = appData.currencies || [];
+    tbody.innerHTML = '';
+    if (currencies.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center empty-state">لا توجد عملات</td></tr>';
+        return;
+    }
+    var defaultCur = appData.defaultCurrency || 'EGP';
+    currencies.forEach(function(c) {
+        var isDefault = c.code === defaultCur;
+        var tr = document.createElement('tr');
+        tr.innerHTML = '\n            <td>' + escapeHtml(c.code) + '</td>\n            <td>' + escapeHtml(c.name) + ' (' + escapeHtml(c.symbol) + ')' + (isDefault ? ' <span class="badge badge-primary">افتراضي</span>' : '') + '</td>\n            <td>' + c.rate + '</td>\n            <td>\n                <button class="btn btn-sm btn-primary" onclick="editCurrency(\'' + c.code + '\')">تعديل</button>\n                ' + (c.code !== 'EGP' ? '<button class="btn btn-sm btn-danger" onclick="deleteCurrency(\'' + c.code + '\')">حذف</button>' : '') + '\n            </td>\n        ';
+        tbody.appendChild(tr);
+    });
+}
+
+function showAddCurrency() {
+    document.getElementById('currencyEditCode').value = '';
+    document.getElementById('currencyModalTitle').textContent = 'إضافة عملة';
+    document.getElementById('currencyCode').value = '';
+    document.getElementById('currencyName').value = '';
+    document.getElementById('currencySymbol').value = '';
+    document.getElementById('currencyRate').value = '1';
+    document.getElementById('currencyModal').style.display = 'block';
+}
+
+function editCurrency(code) {
+    var c = (appData.currencies || []).find(function(x) { return x.code === code; });
+    if (!c) return;
+    document.getElementById('currencyEditCode').value = code;
+    document.getElementById('currencyModalTitle').textContent = 'تعديل عملة: ' + code;
+    document.getElementById('currencyCode').value = c.code;
+    document.getElementById('currencyName').value = c.name;
+    document.getElementById('currencySymbol').value = c.symbol;
+    document.getElementById('currencyRate').value = c.rate;
+    document.getElementById('currencyModal').style.display = 'block';
+}
+
+function saveCurrency() {
+    var editCode = document.getElementById('currencyEditCode').value;
+    var code = document.getElementById('currencyCode').value.trim().toUpperCase();
+    var name = document.getElementById('currencyName').value.trim();
+    var symbol = document.getElementById('currencySymbol').value.trim();
+    var rate = parseFloat(document.getElementById('currencyRate').value) || 1;
+    if (!code || !name || !symbol) { showToast('الرجاء إكمال البيانات', 'warning'); return; }
+    if (!appData.currencies) appData.currencies = [];
+    if (editCode) {
+        var existing = appData.currencies.find(function(c) { return c.code === editCode; });
+        if (existing) { existing.code = code; existing.name = name; existing.symbol = symbol; existing.rate = rate; }
+        if (appData.defaultCurrency === editCode) appData.defaultCurrency = code;
+    } else {
+        if (appData.currencies.find(function(c) { return c.code === code; })) { showToast('كود العملة موجود مسبقاً', 'warning'); return; }
+        appData.currencies.push({ code: code, name: name, symbol: symbol, rate: rate });
+    }
+    saveData();
+    renderCurrencies();
+    document.getElementById('currencyModal').style.display = 'none';
+    showToast('تم حفظ العملة', 'success');
+}
+
+function deleteCurrency(code) {
+    if (!confirm('حذف العملة ' + code + '؟')) return;
+    appData.currencies = (appData.currencies || []).filter(function(c) { return c.code !== code; });
+    if (appData.defaultCurrency === code) appData.defaultCurrency = 'EGP';
+    saveData();
+    renderCurrencies();
+    showToast('تم الحذف', 'success');
+}
+
+function formatPriceMulti(amount, currencyCode) {
+    var currencies = appData.currencies || [];
+    var currency = currencies.find(function(c) { return c.code === (currencyCode || appData.defaultCurrency || 'EGP'); });
+    var symbol = currency ? (currency.symbol || '') : appData.settings.currency || 'ج.م';
+    return formatPrice(amount) + ' ' + escapeHtml(symbol);
+}
+
+function convertCurrency(amount, fromCode, toCode) {
+    var currencies = appData.currencies || [];
+    var from = currencies.find(function(c) { return c.code === fromCode; });
+    var to = currencies.find(function(c) { return c.code === toCode; });
+    if (!from || !to) return amount;
+    var egpAmount = amount * (from.rate || 1);
+    return egpAmount / (to.rate || 1);
+}
+
+// ======================================================================
+// Additional helper: Pagination state for new pages
+// ======================================================================
+paginationState.warehouses = { page: 1, perPage: 50 };
+paginationState.warehouseTransfers = { page: 1, perPage: 50 };
+paginationState.purchaseOrders = { page: 1, perPage: 50 };
+paginationState.doctors = { page: 1, perPage: 50 };
+paginationState.giftCards = { page: 1, perPage: 50 };
+paginationState.coupons = { page: 1, perPage: 50 };
+paginationState.compounds = { page: 1, perPage: 50 };
+paginationState.salesTargets = { page: 1, perPage: 50 };
+
+// Load touch mode on startup
+loadTouchMode();
+
+// Reorder alert on load (after init)
+setTimeout(checkReorderAlerts, 2000);
