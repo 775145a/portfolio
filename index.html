@@ -1973,7 +1973,7 @@
                         <label class="form-label" data-i18n="auth.password">كلمة المرور</label>
                         <input type="password" class="form-input" id="authPassword" data-i18n="auth.passwordPlaceholder" placeholder="أدخل كلمة المرور" maxlength="50" autofocus>
                     </div>
-                    <button class="btn btn-primary btn-block" id="authLoginBtn" data-i18n="auth.login">دخول</button>
+                    <button class="btn btn-primary btn-block" id="authLoginBtn" data-i18n="auth.login" onclick="authLogin()">دخول</button>
                     <p class="auth-error" id="authError"></p>
                     <p class="auth-hint" id="authHint"><span data-i18n="auth.hintText">كلمة المرور الافتراضية:</span> <strong>admin123</strong></p>
                 </div>
@@ -1990,8 +1990,8 @@
                         <label class="form-label" data-i18n="auth.confirmPass">تأكيد كلمة المرور الجديدة</label>
                         <input type="password" class="form-input" id="authConfirmPass" maxlength="50">
                     </div>
-                    <button class="btn btn-primary btn-block" id="authChangePassBtn" data-i18n="auth.savePass">تغيير كلمة المرور</button>
-                    <button class="btn btn-secondary btn-block" id="authBackBtn" data-i18n="common.back">رجوع</button>
+                    <button class="btn btn-primary btn-block" id="authChangePassBtn" data-i18n="auth.savePass" onclick="authChangePassword()">تغيير كلمة المرور</button>
+                    <button class="btn btn-secondary btn-block" id="authBackBtn" data-i18n="common.back" onclick="document.getElementById('changePassForm').style.display='none';document.getElementById('loginForm').style.display='block';">رجوع</button>
                     <p class="auth-error" id="authChangeError"></p>
                 </div>
             </div>

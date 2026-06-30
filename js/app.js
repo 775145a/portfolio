@@ -3999,24 +3999,28 @@ function newSale() {
 }
 
 // ===== INIT =====
-loadData();
-loadCategories();
-loadSettings();
-renderMedsGrid();
-renderCart();
-renderDashboard();
-renderInventory();
-renderReports();
-renderCustomers();
-renderSuppliers();
-renderPurchases();
-loadCustomerSelect();
+try {
+    loadData();
+    loadCategories();
+    loadSettings();
+    renderMedsGrid();
+    renderCart();
+    renderDashboard();
+    renderInventory();
+    renderReports();
+    renderCustomers();
+    renderSuppliers();
+    renderPurchases();
+    loadCustomerSelect();
     loadPurchaseSelects();
     checkBackupReminder();
     if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(function(err) {
-        console.log('SW registration failed:', err);
-    });
+        navigator.serviceWorker.register('sw.js').catch(function(err) {
+            console.log('SW registration failed:', err);
+        });
+    }
+} catch (e) {
+    console.error('Init error:', e);
 }
 
 // ===== AUTH SYSTEM =====
@@ -4024,9 +4028,14 @@ let authData = { password: localStorage.getItem('valopos_auth_pass') || 'admin12
 
 function authLogin() {
     try {
-        const username = document.getElementById('authUsername').value.trim();
-        const pass = document.getElementById('authPassword').value.trim();
-        const error = document.getElementById('authError');
+        var username = 'admin';
+        var userInput = document.getElementById('authUsername');
+        if (userInput) username = userInput.value.trim();
+        if (!username) username = 'admin';
+        var passInput = document.getElementById('authPassword');
+        var pass = passInput ? passInput.value.trim() : '';
+        if (!pass) { var e = document.getElementById('authError'); if (e) e.textContent = 'أدخل كلمة المرور'; return; }
+        var error = document.getElementById('authError');
         if (!appData.users || appData.users.length === 0) {
             appData.users = [{ id: 1, username: 'admin', password: 'admin123', role: 'admin', name: 'المدير' }];
             appData.nextUserId = 2;
@@ -4038,9 +4047,10 @@ function authLogin() {
         if (user) {
             currentUser = user;
             authData.locked = false;
-            document.getElementById('authOverlay').style.display = 'none';
-            error.textContent = '';
-            document.getElementById('authPassword').value = '';
+            var overlay = document.getElementById('authOverlay');
+            if (overlay) overlay.style.display = 'none';
+            if (error) error.textContent = '';
+            if (passInput) passInput.value = '';
             var avatar = document.getElementById('headerAvatar');
             if (avatar) avatar.textContent = user.name.charAt(0);
             var sname = document.querySelector('.sidebar-user-name');
@@ -4048,34 +4058,46 @@ function authLogin() {
             audit('login', 'تسجيل دخول المستخدم: ' + user.name);
             renderUserSpecificUI();
         } else {
-            error.textContent = getText('auth.errorWrong');
+            if (error) error.textContent = 'كلمة المرور غير صحيحة';
         }
     } catch (e) {
         console.error('Login error:', e);
-        var error = document.getElementById('authError');
-        if (error) error.textContent = 'خطأ في تسجيل الدخول';
+        var el = document.getElementById('authError');
+        if (el) el.textContent = 'خطأ في تسجيل الدخول';
     }
 }
 
 function authChangePassword() {
-    const oldPass = document.getElementById('authOldPass').value.trim();
-    const newPass = document.getElementById('authNewPass').value.trim();
-    const confirmPass = document.getElementById('authConfirmPass').value.trim();
-    const error = document.getElementById('authChangeError');
-    if (oldPass !== authData.password) { error.textContent = getText('auth.changeErrorWrong'); return; }
-    if (newPass.length < 6) { error.textContent = getText('auth.changeErrorLength'); return; }
-    if (newPass !== confirmPass) { error.textContent = getText('auth.changeErrorMatch'); return; }
-    authData.password = newPass;
-    localStorage.setItem('valopos_auth_pass', newPass);
-    error.textContent = '';
-    document.getElementById('authOldPass').value = '';
-    document.getElementById('authNewPass').value = '';
-    document.getElementById('authConfirmPass').value = '';
-    document.getElementById('changePassForm').style.display = 'none';
-    document.getElementById('loginForm').style.display = 'block';
-    document.getElementById('authHint').style.display = 'none';
-    document.getElementById('authModeBtn').textContent = getText('auth.switchToChange');
-    document.getElementById('authPassword').focus();
+    try {
+        var oldPassInput = document.getElementById('authOldPass');
+        var newPassInput = document.getElementById('authNewPass');
+        var confirmPassInput = document.getElementById('authConfirmPass');
+        var error = document.getElementById('authChangeError');
+        var oldPass = oldPassInput ? oldPassInput.value.trim() : '';
+        var newPass = newPassInput ? newPassInput.value.trim() : '';
+        var confirmPass = confirmPassInput ? confirmPassInput.value.trim() : '';
+        if (oldPass !== authData.password) { if (error) error.textContent = 'كلمة المرور الحالية غير صحيحة'; return; }
+        if (newPass.length < 6) { if (error) error.textContent = 'كلمة المرور الجديدة يجب أن تكون 6 أحرف أو أكثر'; return; }
+        if (newPass !== confirmPass) { if (error) error.textContent = 'كلمة المرور غير متطابقة'; return; }
+        authData.password = newPass;
+        localStorage.setItem('valopos_auth_pass', newPass);
+        if (error) error.textContent = '';
+        if (oldPassInput) oldPassInput.value = '';
+        if (newPassInput) newPassInput.value = '';
+        if (confirmPassInput) confirmPassInput.value = '';
+        var changeForm = document.getElementById('changePassForm');
+        var loginForm = document.getElementById('loginForm');
+        var hint = document.getElementById('authHint');
+        var modeBtn = document.getElementById('authModeBtn');
+        var pwdField = document.getElementById('authPassword');
+        if (changeForm) changeForm.style.display = 'none';
+        if (loginForm) loginForm.style.display = 'block';
+        if (hint) hint.style.display = 'none';
+        if (modeBtn) modeBtn.textContent = 'تغيير كلمة المرور';
+        if (pwdField) pwdField.focus();
+    } catch (e) {
+        console.error('Change password error:', e);
+    }
 }
 
 document.getElementById('authLoginBtn').addEventListener('click', authLogin);
