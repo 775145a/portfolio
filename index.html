@@ -74,6 +74,10 @@
                     <span class="nav-icon">&#x1F4CA;</span>
                     <span>التقارير</span>
                 </a>
+                <a href="#" class="nav-item" data-page="expenses">
+                    <span class="nav-icon">&#x1F4B0;</span>
+                    <span>المصروفات</span>
+                </a>
                 <a href="#" class="nav-item" data-page="settings">
                     <span class="nav-icon">&#x2699;&#xFE0F;</span>
                     <span>الإعدادات</span>
@@ -159,6 +163,13 @@
                         <div class="stat-info">
                             <span class="stat-value" id="monthlySales">0</span>
                             <span class="stat-label">مبيعات الشهر</span>
+                        </div>
+                    </div>
+                    <div class="stat-card purple">
+                        <div class="stat-icon">&#x1F4B8;</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="expenseTodayCard">0</span>
+                            <span class="stat-label">مصروفات اليوم</span>
                         </div>
                     </div>
                 </div>
@@ -283,6 +294,19 @@
                                 <span>المدفوع:</span>
                                 <input type="number" id="paidInput" class="form-input" placeholder="المبلغ المدفوع">
                             </div>
+                            <div style="margin:4px 0;">
+                                <select id="paymentMethod" style="width:100%;padding:8px;border:1px solid var(--border-light);border-radius:6px;background:var(--bg);color:var(--text);">
+                                    <option value="cash">💰 نقداً</option>
+                                    <option value="vodafone">📱 فودافون كاش</option>
+                                    <option value="instapay">💳 إنستا باي</option>
+                                    <option value="card">💳 بطاقة ائتمان</option>
+                                    <option value="split">🔀 مقسم (نقدي + كاش)</option>
+                                </select>
+                            </div>
+                            <div class="cart-row" id="splitAmountRow" style="display:none;">
+                                <span>المبلغ النقدي:</span>
+                                <input type="number" id="splitAmountInput" class="form-input" placeholder="الجزء النقدي">
+                            </div>
                             <div class="cart-row">
                                 <span>الباقي:</span>
                                 <span class="cart-change" id="cartChange">0.00 ج.م</span>
@@ -340,6 +364,7 @@
                             <tbody id="inventoryBody"></tbody>
                         </table>
                     </div>
+                    <div id="invPagination" class="pagination"></div>
                 </div>
             </section>
 
@@ -368,6 +393,7 @@
                             <tbody id="suppliersBody"></tbody>
                         </table>
                     </div>
+                    <div id="suppliersPagination" class="pagination"></div>
                 </div>
             </section>
 
@@ -401,6 +427,7 @@
                             <tbody id="purchasesBody"></tbody>
                         </table>
                     </div>
+                    <div id="purchasesPagination" class="pagination"></div>
                 </div>
             </section>
 
@@ -431,6 +458,7 @@
                             <tbody id="customersBody"></tbody>
                         </table>
                     </div>
+                    <div id="customersPagination" class="pagination"></div>
                 </div>
             </section>
 
@@ -439,11 +467,20 @@
                 <div class="page-header">
                     <h1>التقارير</h1>
                 </div>
-                <div class="report-filters" style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+                <div class="report-filters" style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
                     <input type="date" id="reportDateFrom" class="form-input" style="width:160px;">
                     <input type="date" id="reportDateTo" class="form-input" style="width:160px;">
+                    <select id="reportPaymentMethod" class="form-select" style="width:140px;">
+                        <option value="الكل">كل طرق الدفع</option>
+                        <option value="cash">💰 نقداً</option>
+                        <option value="vodafone">📱 فودافون كاش</option>
+                        <option value="instapay">💳 إنستا باي</option>
+                        <option value="card">💳 بطاقة</option>
+                        <option value="split">🔀 مقسم</option>
+                    </select>
                     <button class="btn btn-sm btn-primary" id="filterReportsBtn">تصفية</button>
                     <button class="btn btn-sm btn-success" id="exportCsvBtn">تصدير CSV</button>
+                    <button class="btn btn-sm btn-warning" onclick="openDailyClosing()">🔒 إقفال اليوم</button>
                 </div>
                 <div class="reports-grid">
                     <div class="card">
@@ -486,6 +523,12 @@
                             <div class="big-number profit-number" id="reportMonthProfit">0 ج.م</div>
                         </div>
                     </div>
+                    <div class="card">
+                        <div class="card-header"><h3>إجمالي المصروفات</h3></div>
+                        <div class="card-body text-center">
+                            <div class="big-number" id="reportTotalExpenses" style="color:var(--danger)">0 ج.م</div>
+                        </div>
+                    </div>
                     <div class="card full-width">
                         <div class="card-header"><h3>الربح اليومي (آخر 7 أيام)</h3></div>
                         <div class="card-body">
@@ -496,10 +539,11 @@
                         <div class="card-header"><h3>جميع الفواتير</h3></div>
                         <div class="table-responsive">
                                 <table class="table" id="allInvoicesTable">
-                                    <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>عدد الأصناف</th><th>الإجمالي</th><th>الخصم</th><th>الصافي</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
-                                <tbody id="allInvoicesBody"><tr><td colspan="9" class="text-center empty-state">لا توجد فواتير</td></tr></tbody>
+                                    <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>عدد الأصناف</th><th>الإجمالي</th><th>الخصم</th><th>الصافي</th><th>طريقة الدفع</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+                                <tbody id="allInvoicesBody"><tr><td colspan="10" class="text-center empty-state">لا توجد فواتير</td></tr></tbody>
                             </table>
                         </div>
+                        <div id="invoicesPagination" class="pagination"></div>
                     </div>
                     <div class="card full-width">
                         <div class="card-header">
@@ -512,7 +556,77 @@
                             </table>
                         </div>
                     </div>
+                    <div class="card full-width">
+                        <div class="card-header">
+                            <h3>سجل الإقفالات اليومية (الندرة)</h3>
+                            <button class="btn btn-sm btn-warning" onclick="openDailyClosing()">🔒 إقفال اليوم</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table" id="closingsTable">
+                                <thead><tr><th>#</th><th>التاريخ</th><th>المتوقع</th><th>الفعلية</th><th>مصروفات</th><th>الفرق</th><th>ملاحظات</th><th>أقفل في</th></tr></thead>
+                                <tbody id="closingsBody"><tr><td colspan="8" class="text-center empty-state">لا توجد إقفالات سابقة</td></tr></tbody>
+                            </table>
+                        </div>
+                        <div id="closingsPagination" class="pagination"></div>
+                    </div>
                 </div>
+            </section>
+
+            <!-- ===== صفحة المصروفات ===== -->
+            <section class="page" id="page-expenses">
+                <div class="page-header">
+                    <h1>المصروفات</h1>
+                    <button class="btn btn-primary" onclick="addExpense()">+ إضافة مصروف</button>
+                </div>
+                <div class="report-filters" style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+                    <select id="expenseCatFilter" class="form-select" style="width:140px;">
+                        <option value="الكل">كل الفئات</option>
+                        <option value="إيجار">إيجار</option>
+                        <option value="رواتب">رواتب</option>
+                        <option value="كهرباء">كهرباء</option>
+                        <option value="مياه">مياه</option>
+                        <option value="نت">نت</option>
+                        <option value="صيانة">صيانة</option>
+                        <option value="تسويق">تسويق</option>
+                        <option value="أخرى">أخرى</option>
+                    </select>
+                    <input type="date" id="expenseDateFrom" class="form-input" style="width:150px;">
+                    <input type="date" id="expenseDateTo" class="form-input" style="width:150px;">
+                    <button class="btn btn-sm btn-primary" onclick="renderExpenses()">تصفية</button>
+                </div>
+                <div class="reports-grid" style="margin-bottom:20px;">
+                    <div class="card">
+                        <div class="card-header"><h3>إجمالي المصروفات</h3></div>
+                        <div class="card-body text-center">
+                            <div class="big-number" id="expenseTotal" style="color:var(--danger)">0 ج.م</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>مصروفات اليوم</h3></div>
+                        <div class="card-body text-center">
+                            <div class="big-number" id="expenseTodayTotal" style="color:var(--danger)">0 ج.م</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>مصروفات الشهر</h3></div>
+                        <div class="card-body text-center">
+                            <div class="big-number" id="expenseMonthTotal" style="color:var(--danger)">0 ج.م</div>
+                        </div>
+                    </div>
+                    <div class="card full-width">
+                        <div class="card-header"><h3>حسب الفئة</h3></div>
+                        <div class="card-body" id="expenseCategorySummary"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead><tr><th>#</th><th>التاريخ</th><th>الفئة</th><th>المبلغ</th><th>البيان</th><th>إجراءات</th></tr></thead>
+                            <tbody id="expensesBody"><tr><td colspan="6" class="text-center empty-state">لا توجد مصروفات</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="expensesPagination" class="pagination"></div>
             </section>
 
             <!-- ===== صفحة الإعدادات ===== -->
@@ -828,6 +942,100 @@
                 <button class="btn btn-primary" id="barcodeCaptureBtn">مسح</button>
                 <button class="btn btn-secondary" id="barcodeCloseBtn">إغلاق</button>
             </div>
+        </div>
+    </div>
+
+    <!-- مودال المصروفات -->
+    <div class="modal" id="expenseModal">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="modal-close">&times;</span>
+            <h2 id="expenseModalTitle">إضافة مصروف</h2>
+            <input type="hidden" id="expenseEditId" value="">
+            <div class="form-group">
+                <label>الفئة</label>
+                <select id="expenseCategory" class="form-select">
+                    <option value="إيجار">إيجار</option>
+                    <option value="رواتب">رواتب</option>
+                    <option value="كهرباء">كهرباء</option>
+                    <option value="مياه">مياه</option>
+                    <option value="نت">نت</option>
+                    <option value="صيانة">صيانة</option>
+                    <option value="تسويق">تسويق</option>
+                    <option value="أخرى">أخرى</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>المبلغ <span class="required">*</span></label>
+                <input type="number" id="expenseAmount" class="form-input" min="0" step="0.5" placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label>البيان</label>
+                <textarea id="expenseNotes" class="form-input" rows="2" placeholder="ملاحظات"></textarea>
+            </div>
+            <div class="form-group">
+                <label>التاريخ</label>
+                <input type="date" id="expenseDate" class="form-input">
+            </div>
+            <button class="btn btn-success btn-block" onclick="saveExpense()">حفظ</button>
+        </div>
+    </div>
+
+    <!-- مودال الإقفال اليومي (الندرة) -->
+    <div class="modal" id="dailyClosingModal">
+        <div class="modal-content" style="max-width:500px;">
+            <span class="modal-close">&times;</span>
+            <h2>إقفال اليوم (الندرة اليومية)</h2>
+            <div class="form-group">
+                <label>التاريخ</label>
+                <input type="date" id="closingDate" class="form-input" readonly>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group">
+                    <label>المتوقع نقداً</label>
+                    <input type="text" id="closingExpectedCash" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label>الفعلية نقداً</label>
+                    <input type="number" id="closingActualCash" class="form-input" oninput="calcClosingDiff()">
+                </div>
+                <div class="form-group">
+                    <label>المتوقع بطاقة</label>
+                    <input type="text" id="closingExpectedCard" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label>الفعلية بطاقة</label>
+                    <input type="number" id="closingActualCard" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>المتوقع فودافون كاش</label>
+                    <input type="text" id="closingExpectedVodafone" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label>الفعلية فودافون كاش</label>
+                    <input type="number" id="closingActualVodafone" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>المتوقع إنستا باي</label>
+                    <input type="text" id="closingExpectedInstaPay" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label>الفعلية إنستا باي</label>
+                    <input type="number" id="closingActualInstaPay" class="form-input">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>مصروفات اليوم</label>
+                <input type="text" id="closingExpensesToday" class="form-input" readonly>
+            </div>
+            <div class="form-group">
+                <label>ملاحظات</label>
+                <textarea id="closingNotes" class="form-input" rows="2" placeholder="أي ملاحظات"></textarea>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:16px;font-weight:700;">
+                <span>الفرق (نقداً):</span>
+                <span id="closingDiff" style="color:var(--text);">0.00</span>
+            </div>
+            <button class="btn btn-success btn-block" onclick="confirmDailyClosing()">إقفال اليوم</button>
         </div>
     </div>
 

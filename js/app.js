@@ -497,6 +497,7 @@ function reRenderCurrentPage() {
     else if (id === 'page-suppliers') renderSuppliers();
     else if (id === 'page-purchases') renderPurchases();
     else if (id === 'page-reports') renderReports();
+    else if (id === 'page-expenses') renderExpenses();
     else if (id === 'page-settings') { loadSettings(); }
 }
 
@@ -520,7 +521,11 @@ let appData = {
     nextPurchaseId: 1,
     nextReturnId: 1,
     returns: [],
-    stockChanges: []
+    stockChanges: [],
+    nextExpenseId: 1,
+    expenses: [],
+    nextClosingId: 1,
+    closings: []
 };
 
 function loadData() {
@@ -534,6 +539,8 @@ function loadData() {
             console.error('Error loading data');
         }
     }
+    loadMeds();
+    updateCur();
 }
 
 function saveData() {
@@ -544,6 +551,30 @@ function saveData() {
         showToast('\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A\u060C \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0643\u0627\u0645\u0644', 'error');
     }
 }
+
+function saveMeds() {
+    try {
+        localStorage.setItem('pharmacy_pos_meds', JSON.stringify(medicinesDB));
+    } catch (e) {
+        console.error('Error saving medicines:', e);
+    }
+}
+
+function loadMeds() {
+    let saved = localStorage.getItem('pharmacy_pos_meds');
+    if (saved) {
+        try {
+            let parsed = JSON.parse(saved);
+            medicinesDB.length = 0;
+            parsed.forEach(function(m) { medicinesDB.push(m); });
+        } catch (e) {
+            console.error('Error loading medicines');
+        }
+    }
+}
+
+var cur = '\u062C.\u0645';
+function updateCur() { cur = escapeHtml(appData.settings.currency || '\u062C.\u0645'); }
 
 function formatDate(d) {
     let date = new Date(d);
@@ -655,6 +686,8 @@ navItems.forEach(function(item) {
         if (pageId === 'customers') renderCustomers();
         if (pageId === 'suppliers') renderSuppliers();
         if (pageId === 'purchases') { renderPurchases(); loadPurchaseSelects(); }
+        if (pageId === 'expenses') renderExpenses();
+        if (pageId === 'settings') { loadSettings(); if (typeof checkTodayClosing === 'function') checkTodayClosing(); }
         if (window.innerWidth < 768) {
             document.getElementById('sidebar').classList.remove('open');
         }
@@ -749,7 +782,7 @@ function renderMedsGrid(query) {
         if (expiryStatus === 'expired' && m.qty > 0) extraClass += ' expired';
         else if (expiryStatus === 'soon' && m.qty > 0) extraClass += ' expiring';
         div.className = 'med-item' + extraClass;
-        div.innerHTML = '\n            <span class="med-name">' + escapeHtml(m.name) + '</span>\n            <span class="med-price">' + formatPrice(m.price) + ' ' + appData.settings.currency + '</span>\n            <span class="med-stock">' + getText('pos.stock') + ' ' + m.qty + '</span>\n        ';
+        div.innerHTML = '\n            <span class="med-name">' + escapeHtml(m.name) + '</span>\n            <span class="med-price">' + formatPrice(m.price) + ' ' + cur + '</span>\n            <span class="med-stock">' + getText('pos.stock') + ' ' + m.qty + '</span>\n        ';
         if (m.qty > 0 && expiryStatus !== 'expired') {
             div.addEventListener('click', function() { addToCart(m); });
         }
@@ -792,7 +825,7 @@ function doSearch() {
         results.slice(0, 8).forEach(function(m) {
             let item = document.createElement('div');
             item.className = 'search-suggestion-item';
-            item.innerHTML = '\n                <div class="search-suggestion-info">\n                    <span class="search-suggestion-name">' + highlightText(m.name, q) + '</span>\n                    <span class="search-suggestion-sub">' + highlightText(m.scientificName, q) + ' | ' + highlightText(m.category, q) + '</span>\n                </div>\n                <div style="text-align:left;">\n                    <div class="search-suggestion-price">' + formatPrice(m.price) + ' ' + appData.settings.currency + '</div>\n                    <div class="search-suggestion-stock">' + getText('pos.stock') + ' ' + m.qty + '</div>\n                </div>\n            ';
+            item.innerHTML = '\n                <div class="search-suggestion-info">\n                    <span class="search-suggestion-name">' + highlightText(m.name, q) + '</span>\n                    <span class="search-suggestion-sub">' + highlightText(m.scientificName, q) + ' | ' + highlightText(m.category, q) + '</span>\n                </div>\n                <div style="text-align:left;">\n                    <div class="search-suggestion-price">' + formatPrice(m.price) + ' ' + cur + '</div>\n                    <div class="search-suggestion-stock">' + getText('pos.stock') + ' ' + m.qty + '</div>\n                </div>\n            ';
             if (m.qty > 0) {
                 item.addEventListener('click', function() {
                     addToCart(m);
@@ -906,7 +939,7 @@ function renderCart() {
     appData.cart.forEach(function(item, idx) {
         let div = document.createElement('div');
         div.className = 'cart-item';
-        div.innerHTML = '\n            <div class="cart-item-info">\n                <span class="cart-item-name">' + escapeHtml(item.name) + '</span>\n                <span class="cart-item-sub">' + formatPrice(item.price) + ' ' + appData.settings.currency + ' \u00D7 ' + item.qty + '</span>\n            </div>\n            <div class="cart-item-actions">\n                <input type="number" class="cart-item-qty" value="' + item.qty + '" min="1" max="' + item.maxQty + '" data-index="' + idx + '">\n                <span class="cart-item-remove" data-index="' + idx + '">&times;</span>\n            </div>\n        ';
+        div.innerHTML = '\n            <div class="cart-item-info">\n                <span class="cart-item-name">' + escapeHtml(item.name) + '</span>\n                <span class="cart-item-sub">' + formatPrice(item.price) + ' ' + cur + ' \u00D7 ' + item.qty + '</span>\n            </div>\n            <div class="cart-item-actions">\n                <input type="number" class="cart-item-qty" value="' + item.qty + '" min="1" max="' + item.maxQty + '" data-index="' + idx + '">\n                <span class="cart-item-remove" data-index="' + idx + '">&times;</span>\n            </div>\n        ';
         container.appendChild(div);
     });
     container.querySelectorAll('.cart-item-qty').forEach(function(inp) {
@@ -941,9 +974,9 @@ function updateCartSummary() {
     let net = Math.max(0, subtotal - discount + tax);
     let paid = parseFloat(document.getElementById('paidInput').value) || 0;
     let change = Math.max(0, paid - net);
-    document.getElementById('cartTotal').textContent = formatPrice(subtotal) + ' ' + appData.settings.currency;
-    document.getElementById('cartNet').textContent = formatPrice(net) + ' ' + appData.settings.currency;
-    document.getElementById('cartChange').textContent = formatPrice(change) + ' ' + appData.settings.currency;
+    document.getElementById('cartTotal').textContent = formatPrice(subtotal) + ' ' + cur;
+    document.getElementById('cartNet').textContent = formatPrice(net) + ' ' + cur;
+    document.getElementById('cartChange').textContent = formatPrice(change) + ' ' + cur;
 }
 
 function togglePrescriptionSection() {
@@ -969,6 +1002,20 @@ function resetPrescriptionFields() {
 
 document.getElementById('discountInput').addEventListener('input', updateCartSummary);
 document.getElementById('paidInput').addEventListener('input', updateCartSummary);
+
+document.addEventListener('change', function(e) {
+    if (e.target.id === 'paymentMethod') {
+        let row = document.getElementById('splitAmountRow');
+        if (row) {
+            row.style.display = e.target.value === 'split' ? 'flex' : 'none';
+        }
+    }
+});
+document.addEventListener('input', function(e) {
+    if (e.target.id === 'splitAmountInput' || e.target.id === 'paidInput' || e.target.id === 'paymentMethod') {
+        updateCartSummary();
+    }
+});
 
 function loadCustomerSelect() {
     let sel = document.getElementById('cartCustomer');
@@ -1004,16 +1051,12 @@ document.getElementById('checkoutBtn').addEventListener('click', function() {
     let tax = subtotal * taxRate / 100;
     let net = Math.max(0, subtotal - discount + tax);
     let paid = parseFloat(document.getElementById('paidInput').value) || 0;
-    if (paid < net) {
-        showToast('\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639 \u0623\u0642\u0644 \u0645\u0646 \u0627\u0644\u0635\u0627\u0641\u064A!', 'error');
-        return;
-    }
     let content = document.getElementById('confirmSaleContent');
     let itemsHtml = '';
     appData.cart.forEach(function(item) {
-        itemsHtml += '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;border-bottom:1px solid var(--border-light);"><span>' + escapeHtml(item.name) + ' \u00D7' + item.qty + '</span><span>' + formatPrice(item.price * item.qty) + ' ' + appData.settings.currency + '</span></div>';
+        itemsHtml += '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;border-bottom:1px solid var(--border-light);"><span>' + escapeHtml(item.name) + ' \u00D7' + item.qty + '</span><span>' + formatPrice(item.price * item.qty) + ' ' + cur + '</span></div>';
     });
-    content.innerHTML = '\n        <div style="margin-bottom:12px;">' + itemsHtml + '</div>\n        <div style="border-top:2px solid var(--primary);padding-top:8px;">\n            <div style="display:flex;justify-content:space-between;font-size:15px;"><span>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</span><span>' + formatPrice(subtotal) + ' ' + appData.settings.currency + '</span></div>\n            <div style="display:flex;justify-content:space-between;font-size:15px;"><span>\u0627\u0644\u062E\u0635\u0645</span><span>' + formatPrice(discount) + ' ' + appData.settings.currency + '</span></div>\n            ' + (taxRate > 0 ? '<div style="display:flex;justify-content:space-between;font-size:15px;"><span>\u0627\u0644\u0636\u0631\u064A\u0628\u0629 (' + taxRate + '%)</span><span>' + formatPrice(tax) + ' ' + appData.settings.currency + '</span></div>' : '') + '\n            <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:700;margin-top:6px;"><span>\u0627\u0644\u0635\u0627\u0641\u064A</span><span>' + formatPrice(net) + ' ' + appData.settings.currency + '</span></div>\n            <div style="display:flex;justify-content:space-between;font-size:15px;color:var(--success);"><span>\u0627\u0644\u0645\u062F\u0641\u0648\u0639</span><span>' + formatPrice(paid) + ' ' + appData.settings.currency + '</span></div>\n            <div style="display:flex;justify-content:space-between;font-size:15px;"><span>\u0627\u0644\u0628\u0627\u0642\u064A</span><span>' + formatPrice(paid - net) + ' ' + appData.settings.currency + '</span></div>\n        </div>\n    ';
+    content.innerHTML = '\n        <div style="margin-bottom:12px;">' + itemsHtml + '</div>\n        <div style="border-top:2px solid var(--primary);padding-top:8px;">\n            <div style="display:flex;justify-content:space-between;font-size:15px;"><span>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</span><span>' + formatPrice(subtotal) + ' ' + cur + '</span></div>\n            <div style="display:flex;justify-content:space-between;font-size:15px;"><span>\u0627\u0644\u062E\u0635\u0645</span><span>' + formatPrice(discount) + ' ' + cur + '</span></div>\n            ' + (taxRate > 0 ? '<div style="display:flex;justify-content:space-between;font-size:15px;"><span>\u0627\u0644\u0636\u0631\u064A\u0628\u0629 (' + taxRate + '%)</span><span>' + formatPrice(tax) + ' ' + cur + '</span></div>' : '') + '\n            <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:700;margin-top:6px;"><span>\u0627\u0644\u0635\u0627\u0641\u064A</span><span>' + formatPrice(net) + ' ' + cur + '</span></div>\n            <div style="display:flex;justify-content:space-between;font-size:15px;color:var(--success);"><span>\u0627\u0644\u0645\u062F\u0641\u0648\u0639</span><span>' + formatPrice(paid) + ' ' + cur + '</span></div>\n            <div style="display:flex;justify-content:space-between;font-size:15px;"><span>\u0627\u0644\u0628\u0627\u0642\u064A</span><span>' + formatPrice(paid - net) + ' ' + cur + '</span></div>\n        </div>\n    ';
     document.getElementById('confirmSaleModal').style.display = 'block';
     document.getElementById('confirmSaleYes').onclick = function() {
         document.getElementById('confirmSaleModal').style.display = 'none';
@@ -1024,6 +1067,12 @@ document.getElementById('checkoutBtn').addEventListener('click', function() {
 function completeSale(subtotal, discount, tax, net, paid) {
     let customerSelect = document.getElementById('cartCustomer');
     let customerId = customerSelect ? parseInt(customerSelect.value) || null : null;
+    let paymentMethodEl = document.getElementById('paymentMethod');
+    let paymentMethod = paymentMethodEl ? paymentMethodEl.value : 'cash';
+    let splitAmount = 0;
+    if (paymentMethod === 'split') {
+        splitAmount = parseFloat(document.getElementById('splitAmountInput')?.value) || 0;
+    }
     let     invoice = {
         id: appData.nextInvoiceId++,
         date: new Date().toISOString(),
@@ -1039,6 +1088,8 @@ function completeSale(subtotal, discount, tax, net, paid) {
         change: paid - net,
         customerId: customerId,
         status: 'مكتملة',
+        paymentMethod: paymentMethod,
+        splitAmount: splitAmount,
         prescription: {
             doctor: (document.getElementById('rxDoctor')?.value || '').trim(),
             diagnosis: (document.getElementById('rxDiagnosis')?.value || '').trim(),
@@ -1062,11 +1113,18 @@ function completeSale(subtotal, discount, tax, net, paid) {
     }
     appData.cart = [];
     saveData();
+    saveMeds();
     renderCart();
     renderDashboard();
     updateCartSummary();
     document.getElementById('discountInput').value = 0;
     document.getElementById('paidInput').value = '';
+    let pmEl = document.getElementById('paymentMethod');
+    if (pmEl) pmEl.value = 'cash';
+    let saEl = document.getElementById('splitAmountRow');
+    if (saEl) saEl.style.display = 'none';
+    let saInp = document.getElementById('splitAmountInput');
+    if (saInp) saInp.value = '';
     if (customerSelect) customerSelect.value = '';
     showReceipt(invoice);
     showToast('\u062A\u0645 \u0625\u062A\u0645\u0627\u0645 \u0627\u0644\u0628\u064A\u0639 \u0628\u0646\u062C\u0627\u062D!', 'success');
@@ -1078,8 +1136,14 @@ document.getElementById('newSaleBtn').addEventListener('click', function() {
     renderCart();
     document.getElementById('discountInput').value = 0;
     document.getElementById('paidInput').value = '';
+    let pmEl = document.getElementById('paymentMethod');
+    if (pmEl) pmEl.value = 'cash';
+    let saRow = document.getElementById('splitAmountRow');
+    if (saRow) saRow.style.display = 'none';
+    let saInp = document.getElementById('splitAmountInput');
+    if (saInp) saInp.value = '';
     resetPrescriptionFields();
-    showToast('\u0641\u0627\u062A\u0648\u0631\u0629 \u062C\u062F\u064A\u062F\u0629', 'info');
+    showToast('فاتورة جديدة', 'info');
 });
 
 // ===== RECEIPT =====
@@ -1113,7 +1177,7 @@ function showReceipt(invoice) {
     }
     let footer = appData.settings.receiptFooter || '\u0634\u0643\u0631\u0627\u064B \u0644\u062A\u0639\u0627\u0645\u0644\u0643\u0645 \u0645\u0639\u0646\u0627';
     let taxRate = parseFloat(appData.settings.taxRate) || 0;
-    content.innerHTML = '\n        <div class="receipt">\n            <h3>' + escapeHtml(appData.settings.pharmacyName || 'ValoPOS') + '</h3>\n            <p>' + escapeHtml(appData.settings.address || '') + '</p>\n            <p>' + escapeHtml(appData.settings.phone || '') + '</p>\n            ' + firstBarcode + '\n            <div class="receipt-line"></div>\n            <p>\u0641\u0627\u062A\u0648\u0631\u0629 #' + invoice.id + '</p>\n            <p>' + formatDate(invoice.date) + '</p>\n            ' + (customerName ? '<p class="receipt-customer">\u0627\u0644\u0639\u0645\u064A\u0644: ' + escapeHtml(customerName) + '</p>' : '') + '\n            ' + (invoice.prescription && invoice.prescription.doctor ? '<div class="receipt-line"></div><p style="font-weight:700;margin:4px 0;font-size:13px;">\uD83D\uDCCB \u0631\u0648\u0634\u062A\u0629 \u0637\u0628\u064A\u0629</p><p>\u0627\u0644\u0637\u0628\u064A\u0628: ' + escapeHtml(invoice.prescription.doctor) + '</p>' + (invoice.prescription.diagnosis ? '<p>\u0627\u0644\u062A\u0634\u062E\u064A\u0635: ' + escapeHtml(invoice.prescription.diagnosis) + '</p>' : '') + (invoice.prescription.refills ? '<p>\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0635\u0631\u0641: ' + invoice.prescription.refills + '</p>' : '') + (invoice.prescription.date ? '<p>\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ' + invoice.prescription.date + '</p>' : '') : '') + '\n            <div class="receipt-line"></div>\n            ' + itemsHtml + '\n            <div class="receipt-line"></div>\n            <div class="receipt-row"><span>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</span><span>' + formatPrice(invoice.subtotal) + ' ' + appData.settings.currency + '</span></div>\n            <div class="receipt-row"><span>\u0627\u0644\u062E\u0635\u0645</span><span>' + formatPrice(invoice.discount) + ' ' + appData.settings.currency + '</span></div>\n            ' + (taxRate > 0 ? '<div class="receipt-row"><span>\u0627\u0644\u0636\u0631\u064A\u0628\u0629 (' + taxRate + '%)</span><span>' + formatPrice(invoice.tax || 0) + ' ' + appData.settings.currency + '</span></div>' : '') + '\n            <div class="receipt-row receipt-total"><span>\u0627\u0644\u0635\u0627\u0641\u064A</span><span>' + formatPrice(invoice.net) + ' ' + appData.settings.currency + '</span></div>\n            <div class="receipt-row"><span>\u0627\u0644\u0645\u062F\u0641\u0648\u0639</span><span>' + formatPrice(invoice.paid) + ' ' + appData.settings.currency + '</span></div>\n            <div class="receipt-row"><span>\u0627\u0644\u0628\u0627\u0642\u064A</span><span>' + formatPrice(invoice.change) + ' ' + appData.settings.currency + '</span></div>\n            <div class="receipt-line"></div>\n            <p>' + escapeHtml(footer) + '</p>\n        </div>\n    ';
+    content.innerHTML = '\n        <div class="receipt">\n            <h3>' + escapeHtml(appData.settings.pharmacyName || 'ValoPOS') + '</h3>\n            <p>' + escapeHtml(appData.settings.address || '') + '</p>\n            <p>' + escapeHtml(appData.settings.phone || '') + '</p>\n            ' + firstBarcode + '\n            <div class="receipt-line"></div>\n            <p>\u0641\u0627\u062A\u0648\u0631\u0629 #' + invoice.id + '</p>\n            <p>' + formatDate(invoice.date) + '</p>\n            <p>' + (invoice.paymentMethod === 'cash' ? '\uD83D\uDCB0 \u0646\u0642\u062F\u0627\u064B' : invoice.paymentMethod === 'vodafone' ? '\uD83D\uDCF1 \u0641\u0648\u062F\u0627\u0641\u0648\u0646 \u0643\u0627\u0634' : invoice.paymentMethod === 'instapay' ? '\uD83D\uDCB3 \u0625\u0646\u0633\u062A\u0627 \u0628\u0627\u064A' : invoice.paymentMethod === 'card' ? '\uD83D\uDCB3 \u0628\u0637\u0627\u0642\u0629 \u0627\u0626\u062A\u0645\u0627\u0646' : invoice.paymentMethod === 'split' ? '\uD83D\uDD00 \u0645\u0642\u0633\u0645 (\u0646\u0642\u062F\u064A + \u0643\u0627\u0634)' : '\uD83D\uDCB0 \u0646\u0642\u062F\u0627\u064B') + '</p>\n            ' + (customerName ? '<p class="receipt-customer">\u0627\u0644\u0639\u0645\u064A\u0644: ' + escapeHtml(customerName) + '</p>' : '') + '\n            ' + (invoice.prescription && invoice.prescription.doctor ? '<div class="receipt-line"></div><p style="font-weight:700;margin:4px 0;font-size:13px;">\uD83D\uDCCB \u0631\u0648\u0634\u062A\u0629 \u0637\u0628\u064A\u0629</p><p>\u0627\u0644\u0637\u0628\u064A\u0628: ' + escapeHtml(invoice.prescription.doctor) + '</p>' + (invoice.prescription.diagnosis ? '<p>\u0627\u0644\u062A\u0634\u062E\u064A\u0635: ' + escapeHtml(invoice.prescription.diagnosis) + '</p>' : '') + (invoice.prescription.refills ? '<p>\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0635\u0631\u0641: ' + invoice.prescription.refills + '</p>' : '') + (invoice.prescription.date ? '<p>\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ' + invoice.prescription.date + '</p>' : '') : '') + '\n            <div class="receipt-line"></div>\n            ' + itemsHtml + '\n            <div class="receipt-line"></div>\n            <div class="receipt-row"><span>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</span><span>' + formatPrice(invoice.subtotal) + ' ' + cur + '</span></div>\n            <div class="receipt-row"><span>\u0627\u0644\u062E\u0635\u0645</span><span>' + formatPrice(invoice.discount) + ' ' + cur + '</span></div>\n            ' + (taxRate > 0 ? '<div class="receipt-row"><span>\u0627\u0644\u0636\u0631\u064A\u0628\u0629 (' + taxRate + '%)</span><span>' + formatPrice(invoice.tax || 0) + ' ' + cur + '</span></div>' : '') + '\n            <div class="receipt-row receipt-total"><span>\u0627\u0644\u0635\u0627\u0641\u064A</span><span>' + formatPrice(invoice.net) + ' ' + cur + '</span></div>\n            <div class="receipt-row"><span>\u0627\u0644\u0645\u062F\u0641\u0648\u0639</span><span>' + formatPrice(invoice.paid) + ' ' + cur + '</span></div>\n            <div class="receipt-row"><span>\u0627\u0644\u0628\u0627\u0642\u064A</span><span>' + formatPrice(invoice.change) + ' ' + cur + '</span></div>\n            <div class="receipt-line"></div>\n            <p>' + escapeHtml(footer) + '</p>\n        </div>\n    ';
     document.getElementById('receiptModal').style.display = 'block';
 }
 
@@ -1130,7 +1194,7 @@ function printA4(invoice) {
     let footer = appData.settings.receiptFooter || '\u0634\u0643\u0631\u0627\u064B \u0644\u062A\u0639\u0627\u0645\u0644\u0643\u0645 \u0645\u0639\u0646\u0627';
     let taxRate = parseFloat(appData.settings.taxRate) || 0;
     let w = window.open('', '_blank', 'width=800,height=600');
-    w.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>\u0641\u0627\u062A\u0648\u0631\u0629 A4 - ' + invoice.id + '</title><style>@page{size:A4;margin:15mm}body{font-family:"Segoe UI",sans-serif;color:#222;padding:20px}h2{text-align:center;margin-bottom:5px}.pharmacy-info{text-align:center;margin-bottom:15px;color:#555;font-size:14px}.invoice-info{display:flex;justify-content:space-between;margin-bottom:15px;font-size:13px}table{width:100%;border-collapse:collapse;margin-bottom:15px}th{background:#2e1065;color:#fff;padding:10px 12px;font-size:13px;text-align:center}td{font-size:13px}tr:nth-child(even){background:#f9f9f9}.totals{width:300px;margin-right:auto}.totals div{display:flex;justify-content:space-between;padding:6px 10px;font-size:14px;border-bottom:1px solid #ddd}.totals .net{font-weight:700;font-size:16px;border-top:2px solid #2e1065;padding-top:8px;margin-top:4px}.prescription-info{background:#f0f4ff;padding:12px;border-radius:8px;margin:15px 0;border-right:4px solid #2e1065;font-size:13px}.footer{text-align:center;margin-top:30px;font-size:13px;color:#888;border-top:2px solid #eee;padding-top:15px}@media print{body{padding:0}.no-print{display:none!important}}</style></head><body><h2>' + escapeHtml(appData.settings.pharmacyName || 'ValoPOS') + '</h2><div class="pharmacy-info">' + (appData.settings.address ? escapeHtml(appData.settings.address) + '<br>' : '') + (appData.settings.phone ? escapeHtml(appData.settings.phone) + '<br>' : '') + '</div><div class="invoice-info"><div><strong>\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629:</strong> #' + invoice.id + '</div><div><strong>\u0627\u0644\u062A\u0627\u0631\u064A\u062E:</strong> ' + formatDate(invoice.date) + '</div></div>' + (customerName ? '<div style="margin-bottom:12px;font-size:13px;"><strong>\u0627\u0644\u0639\u0645\u064A\u0644:</strong> ' + escapeHtml(customerName) + '</div>' : '') + (invoice.prescription && invoice.prescription.doctor ? '<div class="prescription-info"><strong>\u0631\u0648\u0634\u062A\u0629 \u0637\u0628\u064A\u0629</strong><br><strong>\u0627\u0644\u0637\u0628\u064A\u0628:</strong> ' + escapeHtml(invoice.prescription.doctor) + (invoice.prescription.diagnosis ? '<br><strong>\u0627\u0644\u062A\u0634\u062E\u064A\u0635:</strong> ' + escapeHtml(invoice.prescription.diagnosis) : '') + (invoice.prescription.refills ? '<br><strong>\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0635\u0631\u0641:</strong> ' + invoice.prescription.refills : '') + (invoice.prescription.date ? '<br><strong>\u0627\u0644\u062A\u0627\u0631\u064A\u062E:</strong> ' + invoice.prescription.date : '') + '</div>' : '') + '<table><thead><tr><th>\u0627\u0633\u0645 \u0627\u0644\u062F\u0648\u0627\u0621</th><th>\u0627\u0644\u0643\u0645\u064A\u0629</th><th>\u0627\u0644\u0633\u0639\u0631</th><th>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><div class="totals"><div><span>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</span><span>' + formatPrice(invoice.subtotal) + ' ' + appData.settings.currency + '</span></div><div><span>\u0627\u0644\u062E\u0635\u0645</span><span>' + formatPrice(invoice.discount) + ' ' + appData.settings.currency + '</span></div>' + (taxRate > 0 ? '<div><span>\u0627\u0644\u0636\u0631\u064A\u0628\u0629 (' + taxRate + '%)</span><span>' + formatPrice(invoice.tax) + ' ' + appData.settings.currency + '</span></div>' : '') + '<div class="net"><span>\u0627\u0644\u0635\u0627\u0641\u064A</span><span>' + formatPrice(invoice.net) + ' ' + appData.settings.currency + '</span></div><div><span>\u0627\u0644\u0645\u062F\u0641\u0648\u0639</span><span>' + formatPrice(invoice.paid) + ' ' + appData.settings.currency + '</span></div><div><span>\u0627\u0644\u0628\u0627\u0642\u064A</span><span>' + formatPrice(invoice.change) + ' ' + appData.settings.currency + '</span></div></div><div class="footer">' + escapeHtml(footer) + '</div><div class="no-print" style="text-align:center;margin-top:20px;"><button onclick="window.print()" style="padding:10px 30px;background:#2e1065;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer;">\u0637\u0628\u0627\u0639\u0629</button></div></body></html>');
+    w.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>\u0641\u0627\u062A\u0648\u0631\u0629 A4 - ' + invoice.id + '</title><style>@page{size:A4;margin:15mm}body{font-family:"Segoe UI",sans-serif;color:#222;padding:20px}h2{text-align:center;margin-bottom:5px}.pharmacy-info{text-align:center;margin-bottom:15px;color:#555;font-size:14px}.invoice-info{display:flex;justify-content:space-between;margin-bottom:15px;font-size:13px}table{width:100%;border-collapse:collapse;margin-bottom:15px}th{background:#2e1065;color:#fff;padding:10px 12px;font-size:13px;text-align:center}td{font-size:13px}tr:nth-child(even){background:#f9f9f9}.totals{width:300px;margin-right:auto}.totals div{display:flex;justify-content:space-between;padding:6px 10px;font-size:14px;border-bottom:1px solid #ddd}.totals .net{font-weight:700;font-size:16px;border-top:2px solid #2e1065;padding-top:8px;margin-top:4px}.prescription-info{background:#f0f4ff;padding:12px;border-radius:8px;margin:15px 0;border-right:4px solid #2e1065;font-size:13px}.footer{text-align:center;margin-top:30px;font-size:13px;color:#888;border-top:2px solid #eee;padding-top:15px}@media print{body{padding:0}.no-print{display:none!important}}</style></head><body><h2>' + escapeHtml(appData.settings.pharmacyName || 'ValoPOS') + '</h2><div class="pharmacy-info">' + (appData.settings.address ? escapeHtml(appData.settings.address) + '<br>' : '') + (appData.settings.phone ? escapeHtml(appData.settings.phone) + '<br>' : '') + '</div><div class="invoice-info"><div><strong>\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629:</strong> #' + invoice.id + '</div><div><strong>\u0627\u0644\u062A\u0627\u0631\u064A\u062E:</strong> ' + formatDate(invoice.date) + '</div><div><strong>\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062F\u0641\u0639:</strong> ' + (invoice.paymentMethod === 'cash' ? '\uD83D\uDCB0 \u0646\u0642\u062F\u0627\u064B' : invoice.paymentMethod === 'vodafone' ? '\uD83D\uDCF1 \u0641\u0648\u062F\u0627\u0641\u0648\u0646 \u0643\u0627\u0634' : invoice.paymentMethod === 'instapay' ? '\uD83D\uDCB3 \u0625\u0646\u0633\u062A\u0627 \u0628\u0627\u064A' : invoice.paymentMethod === 'card' ? '\uD83D\uDCB3 \u0628\u0637\u0627\u0642\u0629' : invoice.paymentMethod === 'split' ? '\uD83D\uDD00 \u0645\u0642\u0633\u0645' : '\uD83D\uDCB0 \u0646\u0642\u062F\u0627\u064B') + '</div></div>' + (customerName ? '<div style="margin-bottom:12px;font-size:13px;"><strong>\u0627\u0644\u0639\u0645\u064A\u0644:</strong> ' + escapeHtml(customerName) + '</div>' : '') + (invoice.prescription && invoice.prescription.doctor ? '<div class="prescription-info"><strong>\u0631\u0648\u0634\u062A\u0629 \u0637\u0628\u064A\u0629</strong><br><strong>\u0627\u0644\u0637\u0628\u064A\u0628:</strong> ' + escapeHtml(invoice.prescription.doctor) + (invoice.prescription.diagnosis ? '<br><strong>\u0627\u0644\u062A\u0634\u062E\u064A\u0635:</strong> ' + escapeHtml(invoice.prescription.diagnosis) : '') + (invoice.prescription.refills ? '<br><strong>\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0635\u0631\u0641:</strong> ' + invoice.prescription.refills : '') + (invoice.prescription.date ? '<br><strong>\u0627\u0644\u062A\u0627\u0631\u064A\u062E:</strong> ' + invoice.prescription.date : '') + '</div>' : '') + '<table><thead><tr><th>\u0627\u0633\u0645 \u0627\u0644\u062F\u0648\u0627\u0621</th><th>\u0627\u0644\u0643\u0645\u064A\u0629</th><th>\u0627\u0644\u0633\u0639\u0631</th><th>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><div class="totals"><div><span>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</span><span>' + formatPrice(invoice.subtotal) + ' ' + cur + '</span></div><div><span>\u0627\u0644\u062E\u0635\u0645</span><span>' + formatPrice(invoice.discount) + ' ' + cur + '</span></div>' + (taxRate > 0 ? '<div><span>\u0627\u0644\u0636\u0631\u064A\u0628\u0629 (' + taxRate + '%)</span><span>' + formatPrice(invoice.tax) + ' ' + cur + '</span></div>' : '') + '<div class="net"><span>\u0627\u0644\u0635\u0627\u0641\u064A</span><span>' + formatPrice(invoice.net) + ' ' + cur + '</span></div><div><span>\u0627\u0644\u0645\u062F\u0641\u0648\u0639</span><span>' + formatPrice(invoice.paid) + ' ' + cur + '</span></div><div><span>\u0627\u0644\u0628\u0627\u0642\u064A</span><span>' + formatPrice(invoice.change) + ' ' + cur + '</span></div></div><div class="footer">' + escapeHtml(footer) + '</div><div class="no-print" style="text-align:center;margin-top:20px;"><button onclick="window.print()" style="padding:10px 30px;background:#2e1065;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer;">\u0637\u0628\u0627\u0639\u0629</button></div></body></html>');
     w.document.close();
 }
 
@@ -1147,7 +1211,7 @@ function printThermal(invoice) {
     let footer = appData.settings.receiptFooter || '\u0634\u0643\u0631\u0627\u064B \u0644\u062A\u0639\u0627\u0645\u0644\u0643\u0645 \u0645\u0639\u0646\u0627';
     let taxRate = parseFloat(appData.settings.taxRate) || 0;
     let w = window.open('', '_blank', 'width=380,height=600');
-    w.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>\u0641\u0627\u062A\u0648\u0631\u0629 \u062D\u0631\u0627\u0631\u064A\u0629 - ' + invoice.id + '</title><style>@page{width:80mm;margin:0;padding:0}body{width:80mm;margin:0 auto;padding:10px 5px;font-family:"Courier New",monospace;font-size:12px;line-height:1.6;color:#000}h3{text-align:center;font-size:16px;margin:0 0 4px}.center{text-align:center;font-size:11px;margin:2px 0}.line{border-top:1px dashed #000;margin:8px 0}.row{display:flex;justify-content:space-between;font-size:12px;padding:2px 0}.total{font-weight:700;font-size:14px;padding-top:4px;border-top:1.5px solid #000}.footer{text-align:center;font-size:11px;margin-top:10px;padding-top:8px;border-top:1px dashed #000}.prescription-info{font-size:11px;padding:6px;border:1px dashed #000;margin:6px 0}@media print{body{width:80mm;margin:0;padding:5px}.no-print{display:none!important}}</style></head><body><h3>' + escapeHtml(appData.settings.pharmacyName || 'ValoPOS') + '</h3><div class="center">' + escapeHtml(appData.settings.address || '') + '</div><div class="center">' + escapeHtml(appData.settings.phone || '') + '</div><div class="line"></div><div class="center"><strong>\u0641\u0627\u062A\u0648\u0631\u0629 #' + invoice.id + '</strong></div><div class="center">' + formatDate(invoice.date) + '</div>' + (customerName ? '<div class="center" style="font-weight:600;">\u0627\u0644\u0639\u0645\u064A\u0644: ' + escapeHtml(customerName) + '</div>' : '') + (invoice.prescription && invoice.prescription.doctor ? '<div class="prescription-info"><strong>\u0631\u0648\u0634\u062A\u0629</strong><br>\u0627\u0644\u0637\u0628\u064A\u0628: ' + escapeHtml(invoice.prescription.doctor) + (invoice.prescription.diagnosis ? '<br>\u0627\u0644\u062A\u0634\u062E\u064A\u0635: ' + escapeHtml(invoice.prescription.diagnosis) : '') + '</div>' : '') + '<div class="line"></div>' + itemsHtml + '<div class="line"></div><div class="row"><span>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</span><span>' + formatPrice(invoice.subtotal) + '</span></div><div class="row"><span>\u0627\u0644\u062E\u0635\u0645</span><span>' + formatPrice(invoice.discount) + '</span></div>' + (taxRate > 0 ? '<div class="row"><span>\u0627\u0644\u0636\u0631\u064A\u0628\u0629</span><span>' + formatPrice(invoice.tax) + '</span></div>' : '') + '<div class="row total"><span>\u0627\u0644\u0635\u0627\u0641\u064A</span><span>' + formatPrice(invoice.net) + '</span></div><div class="row"><span>\u0627\u0644\u0645\u062F\u0641\u0648\u0639</span><span>' + formatPrice(invoice.paid) + '</span></div><div class="row"><span>\u0627\u0644\u0628\u0627\u0642\u064A</span><span>' + formatPrice(invoice.change) + '</span></div><div class="footer">' + escapeHtml(footer) + '</div><div class="no-print" style="text-align:center;margin-top:10px;"><button onclick="window.print()" style="padding:8px 20px;background:#000;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;">\u0637\u0628\u0627\u0639\u0629</button></div></body></html>');
+    w.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>\u0641\u0627\u062A\u0648\u0631\u0629 \u062D\u0631\u0627\u0631\u064A\u0629 - ' + invoice.id + '</title><style>@page{width:80mm;margin:0;padding:0}body{width:80mm;margin:0 auto;padding:10px 5px;font-family:"Courier New",monospace;font-size:12px;line-height:1.6;color:#000}h3{text-align:center;font-size:16px;margin:0 0 4px}.center{text-align:center;font-size:11px;margin:2px 0}.line{border-top:1px dashed #000;margin:8px 0}.row{display:flex;justify-content:space-between;font-size:12px;padding:2px 0}.total{font-weight:700;font-size:14px;padding-top:4px;border-top:1.5px solid #000}.footer{text-align:center;font-size:11px;margin-top:10px;padding-top:8px;border-top:1px dashed #000}.prescription-info{font-size:11px;padding:6px;border:1px dashed #000;margin:6px 0}@media print{body{width:80mm;margin:0;padding:5px}.no-print{display:none!important}}</style></head><body><h3>' + escapeHtml(appData.settings.pharmacyName || 'ValoPOS') + '</h3><div class="center">' + escapeHtml(appData.settings.address || '') + '</div><div class="center">' + escapeHtml(appData.settings.phone || '') + '</div><div class="line"></div><div class="center"><strong>\u0641\u0627\u062A\u0648\u0631\u0629 #' + invoice.id + '</strong></div><div class="center">' + formatDate(invoice.date) + '</div><div class="center">' + (invoice.paymentMethod === 'cash' ? '\uD83D\uDCB0 \u0646\u0642\u062F\u0627\u064B' : invoice.paymentMethod === 'vodafone' ? '\uD83D\uDCF1 \u0641\u0648\u062F\u0627\u0641\u0648\u0646 \u0643\u0627\u0634' : invoice.paymentMethod === 'instapay' ? '\uD83D\uDCB3 \u0625\u0646\u0633\u062A\u0627 \u0628\u0627\u064A' : invoice.paymentMethod === 'card' ? '\uD83D\uDCB3 \u0628\u0637\u0627\u0642\u0629' : invoice.paymentMethod === 'split' ? '\uD83D\uDD00 \u0645\u0642\u0633\u0645' : '\uD83D\uDCB0 \u0646\u0642\u062F\u0627\u064B') + '</div>' + (customerName ? '<div class="center" style="font-weight:600;">\u0627\u0644\u0639\u0645\u064A\u0644: ' + escapeHtml(customerName) + '</div>' : '') + (invoice.prescription && invoice.prescription.doctor ? '<div class="prescription-info"><strong>\u0631\u0648\u0634\u062A\u0629</strong><br>\u0627\u0644\u0637\u0628\u064A\u0628: ' + escapeHtml(invoice.prescription.doctor) + (invoice.prescription.diagnosis ? '<br>\u0627\u0644\u062A\u0634\u062E\u064A\u0635: ' + escapeHtml(invoice.prescription.diagnosis) : '') + '</div>' : '') + '<div class="line"></div>' + itemsHtml + '<div class="line"></div><div class="row"><span>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</span><span>' + formatPrice(invoice.subtotal) + '</span></div><div class="row"><span>\u0627\u0644\u062E\u0635\u0645</span><span>' + formatPrice(invoice.discount) + '</span></div>' + (taxRate > 0 ? '<div class="row"><span>\u0627\u0644\u0636\u0631\u064A\u0628\u0629</span><span>' + formatPrice(invoice.tax) + '</span></div>' : '') + '<div class="row total"><span>\u0627\u0644\u0635\u0627\u0641\u064A</span><span>' + formatPrice(invoice.net) + '</span></div><div class="row"><span>\u0627\u0644\u0645\u062F\u0641\u0648\u0639</span><span>' + formatPrice(invoice.paid) + '</span></div><div class="row"><span>\u0627\u0644\u0628\u0627\u0642\u064A</span><span>' + formatPrice(invoice.change) + '</span></div><div class="footer">' + escapeHtml(footer) + '</div><div class="no-print" style="text-align:center;margin-top:10px;"><button onclick="window.print()" style="padding:8px 20px;background:#000;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;">\u0637\u0628\u0627\u0639\u0629</button></div></body></html>');
     w.document.close();
 }
 
@@ -1183,7 +1247,7 @@ function viewRx(invoiceId) {
     if (!inv || !inv.prescription) return;
     let p = inv.prescription;
     let content = document.getElementById('rxDetailContent');
-    content.innerHTML = '\n        <div style="padding:10px 0;">\n            <p style="margin:6px 0;"><strong>\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629:</strong> #' + inv.id + '</p>\n            <p style="margin:6px 0;"><strong>\u0627\u0644\u0637\u0628\u064A\u0628:</strong> ' + escapeHtml(p.doctor || '-') + '</p>\n            ' + (p.diagnosis ? '<p style="margin:6px 0;"><strong>\u0627\u0644\u062A\u0634\u062E\u064A\u0635:</strong> ' + escapeHtml(p.diagnosis) + '</p>' : '') + '\n            <p style="margin:6px 0;"><strong>\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0635\u0631\u0641:</strong> ' + (p.refills || 0) + '</p>\n            ' + (p.date ? '<p style="margin:6px 0;"><strong>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0631\u0648\u0634\u062A\u0629:</strong> ' + p.date + '</p>' : '') + '\n            <div style="margin:12px 0;border-top:1px solid var(--border-light);padding-top:10px;">\n                <strong style="font-size:13px;">\u0627\u0644\u0623\u0635\u0646\u0627\u0641:</strong>\n                ' + inv.items.map(function(item) { return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:13px;border-bottom:1px solid var(--border-light);"><span>' + escapeHtml(item.name) + ' \u00D7' + item.qty + '</span><span>' + formatPrice(item.price * item.qty) + ' ' + appData.settings.currency + '</span></div>'; }).join('') + '\n            </div>\n        </div>\n    ';
+    content.innerHTML = '\n        <div style="padding:10px 0;">\n            <p style="margin:6px 0;"><strong>\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629:</strong> #' + inv.id + '</p>\n            <p style="margin:6px 0;"><strong>\u0627\u0644\u0637\u0628\u064A\u0628:</strong> ' + escapeHtml(p.doctor || '-') + '</p>\n            ' + (p.diagnosis ? '<p style="margin:6px 0;"><strong>\u0627\u0644\u062A\u0634\u062E\u064A\u0635:</strong> ' + escapeHtml(p.diagnosis) + '</p>' : '') + '\n            <p style="margin:6px 0;"><strong>\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0635\u0631\u0641:</strong> ' + (p.refills || 0) + '</p>\n            ' + (p.date ? '<p style="margin:6px 0;"><strong>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0631\u0648\u0634\u062A\u0629:</strong> ' + p.date + '</p>' : '') + '\n            <div style="margin:12px 0;border-top:1px solid var(--border-light);padding-top:10px;">\n                <strong style="font-size:13px;">\u0627\u0644\u0623\u0635\u0646\u0627\u0641:</strong>\n                ' + inv.items.map(function(item) { return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:13px;border-bottom:1px solid var(--border-light);"><span>' + escapeHtml(item.name) + ' \u00D7' + item.qty + '</span><span>' + formatPrice(item.price * item.qty) + ' ' + cur + '</span></div>'; }).join('') + '\n            </div>\n        </div>\n    ';
     document.getElementById('rxModal').style.display = 'block';
 }
 
@@ -1246,11 +1310,15 @@ function renderInventory() {
             input.select();
             function saveInline() {
                 let val = field === 'price' || field === 'qty' ? parseFloat(input.value) : input.value.trim();
-                if (field === 'qty') val = parseInt(val) || 0;
-                if (field === 'price') val = Math.max(0, val);
+                if (field === 'price' || field === 'qty') {
+                    if (isNaN(val)) { renderInventory(); return; }
+                    if (field === 'qty') val = parseInt(val) || 0;
+                    if (field === 'price') val = Math.max(0, val);
+                }
                 if (val !== undefined && val !== '') {
                     med[field] = val;
                     saveData();
+                    saveMeds();
                     renderInventory();
                     renderMedsGrid();
                     showToast(getText('inventory.updated') + ' ' + escapeHtml(med.name), 'success');
@@ -1320,7 +1388,7 @@ function startBarcodeScanner() {
                                     }
                                 }
                             })
-                            .catch(function() {});
+                            .catch(function(err) { showToast(getText('barcode.error') + ' ' + escapeHtml(err.message), 'error'); });
                     }
                 }, 400);
             }
@@ -1401,6 +1469,7 @@ document.getElementById('saveStockBtn').addEventListener('click', function() {
     if (price > 0) med.price = price;
     if (expiry) med.expiryDate = expiry;
     saveData();
+    saveMeds();
     renderInventory();
     renderMedsGrid();
     document.getElementById('stockModal').style.display = 'none';
@@ -1452,6 +1521,7 @@ document.getElementById('saveNewMedBtn').addEventListener('click', function() {
         rx: rx
     });
     saveData();
+    saveMeds();
     renderInventory();
     renderMedsGrid();
     loadCategories();
@@ -1483,7 +1553,7 @@ function renderCustomers() {
         let debt = c.debt || 0;
         let debtClass = debt > 0 ? 'positive' : 'zero';
         let tr = document.createElement('tr');
-        tr.innerHTML = '\n            <td>' + c.id + '</td>\n            <td><strong>' + escapeHtml(c.name) + '</strong></td>\n            <td>' + escapeHtml(c.phone) + '</td>\n            <td>' + formatPrice(c.totalSpent || 0) + ' ' + appData.settings.currency + '</td>\n            <td>' + (c.points || 0) + '</td>\n            <td><span class="debt-badge ' + debtClass + '">' + formatPrice(debt) + ' ' + appData.settings.currency + '</span></td>\n            <td>' + (c.lastPurchase ? formatDate(c.lastPurchase) : '-') + '</td>\n            <td class="customer-actions">\n                <button class="btn btn-sm btn-info" onclick="viewCustomer(' + c.id + ')">' + getText('customers.view') + '</button>\n                <button class="btn btn-sm btn-primary" onclick="editCustomer(' + c.id + ')">' + getText('customers.edit') + '</button>\n                <button class="btn btn-sm btn-warning" onclick="addDebtPayment(' + c.id + ')">' + getText('customers.payDebt') + '</button>\n                <button class="btn btn-sm btn-danger" onclick="deleteCustomer(' + c.id + ')">' + getText('customers.delete') + '</button>\n            </td>\n        ';
+        tr.innerHTML = '\n            <td>' + c.id + '</td>\n            <td><strong>' + escapeHtml(c.name) + '</strong></td>\n            <td>' + escapeHtml(c.phone) + '</td>\n            <td>' + formatPrice(c.totalSpent || 0) + ' ' + cur + '</td>\n            <td>' + (c.points || 0) + '</td>\n            <td><span class="debt-badge ' + debtClass + '">' + formatPrice(debt) + ' ' + cur + '</span></td>\n            <td>' + (c.lastPurchase ? formatDate(c.lastPurchase) : '-') + '</td>\n            <td class="customer-actions">\n                <button class="btn btn-sm btn-info" onclick="viewCustomer(' + c.id + ')">' + getText('customers.view') + '</button>\n                <button class="btn btn-sm btn-primary" onclick="editCustomer(' + c.id + ')">' + getText('customers.edit') + '</button>\n                <button class="btn btn-sm btn-warning" onclick="addDebtPayment(' + c.id + ')">' + getText('customers.payDebt') + '</button>\n                <button class="btn btn-sm btn-danger" onclick="deleteCustomer(' + c.id + ')">' + getText('customers.delete') + '</button>\n            </td>\n        ';
         tbody.appendChild(tr);
     });
     renderPagination('customersPagination', paged.page, paged.pages, 'renderCustomers');
@@ -1542,12 +1612,12 @@ function viewCustomer(id) {
         invoicesHtml = '<tr><td colspan="5" class="text-center empty-state">' + getText('customers.noPurchases') + '</td></tr>';
     } else {
         invoices.slice().reverse().forEach(function(inv) {
-            invoicesHtml += '<tr><td>#' + inv.id + '</td><td>' + formatDate(inv.date) + '</td><td>' + inv.items.length + '</td><td>' + formatPrice(inv.net) + ' ' + appData.settings.currency + '</td><td><span class="badge badge-success">\u0645\u0643\u062A\u0645\u0644\u0629</span>' + (inv.prescription && inv.prescription.doctor ? ' <span class="rx-badge" onclick="viewRx(' + inv.id + ')" title="\u0639\u0631\u0636 \u0627\u0644\u0631\u0648\u0634\u062A\u0629">\uD83D\uDCCB \u0631\u0648\u0634\u062A\u0629</span>' : '') + '</td></tr>';
+            invoicesHtml += '<tr><td>#' + inv.id + '</td><td>' + formatDate(inv.date) + '</td><td>' + inv.items.length + '</td><td>' + formatPrice(inv.net) + ' ' + cur + '</td><td><span class="badge badge-success">\u0645\u0643\u062A\u0645\u0644\u0629</span>' + (inv.prescription && inv.prescription.doctor ? ' <span class="rx-badge" onclick="viewRx(' + inv.id + ')" title="\u0639\u0631\u0636 \u0627\u0644\u0631\u0648\u0634\u062A\u0629">\uD83D\uDCCB \u0631\u0648\u0634\u062A\u0629</span>' : '') + '</td></tr>';
         });
     }
     let debt = c.debt || 0;
     let content = document.getElementById('customerDetailContent');
-    content.innerHTML = '\n        <div class="customer-detail-card">\n            <div class="customer-detail-header">\n                <div>\n                    <div class="customer-detail-name">' + escapeHtml(c.name) + '</div>\n                    <div class="customer-detail-phone">' + escapeHtml(c.phone) + (c.email ? ' | ' + escapeHtml(c.email) : '') + '</div>\n                </div>\n                <button class="btn btn-sm btn-primary" onclick="editCustomer(' + c.id + '); document.getElementById(\'customerDetailModal\').style.display=\'none\';">\u062A\u0639\u062F\u064A\u0644</button>\n            </div>\n            <div class="customer-detail-stats">\n                <div class="customer-stat"><span class="customer-stat-value">' + formatPrice(c.totalSpent || 0) + ' ' + appData.settings.currency + '</span><span class="customer-stat-label">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A</span></div>\n                <div class="customer-stat"><span class="customer-stat-value">' + (c.points || 0) + '</span><span class="customer-stat-label">\u0646\u0642\u0627\u0637</span></div>\n                <div class="customer-stat"><span class="customer-stat-value">' + invoices.length + '</span><span class="customer-stat-label">\u0639\u062F\u062F \u0627\u0644\u0641\u0648\u0627\u062A\u064A\u0631</span></div>\n                <div class="customer-stat"><span class="customer-stat-value" style="color:' + (debt > 0 ? 'var(--danger)' : 'var(--success)') + ';">' + formatPrice(debt) + ' ' + appData.settings.currency + '</span><span class="customer-stat-label">\u0627\u0644\u0645\u062F\u064A\u0648\u0646\u064A\u0629</span></div>\n            </div>\n            <h4 style="margin-bottom:10px;font-size:14px;color:var(--text-light);">\u0633\u062C\u0644 \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A</h4>\n            <div class="table-responsive">\n                <table class="table">\n                    <thead><tr><th>\u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629</th><th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th><th>\u0639\u062F\u062F \u0627\u0644\u0623\u0635\u0646\u0627\u0641</th><th>\u0627\u0644\u0645\u0628\u0644\u063A</th><th>\u0627\u0644\u062D\u0627\u0644\u0629</th></tr></thead>\n                    <tbody>' + invoicesHtml + '</tbody>\n                </table>\n            </div>\n        </div>\n    ';
+    content.innerHTML = '\n        <div class="customer-detail-card">\n            <div class="customer-detail-header">\n                <div>\n                    <div class="customer-detail-name">' + escapeHtml(c.name) + '</div>\n                    <div class="customer-detail-phone">' + escapeHtml(c.phone) + (c.email ? ' | ' + escapeHtml(c.email) : '') + '</div>\n                </div>\n                <button class="btn btn-sm btn-primary" onclick="editCustomer(' + c.id + '); document.getElementById(\'customerDetailModal\').style.display=\'none\';">\u062A\u0639\u062F\u064A\u0644</button>\n            </div>\n            <div class="customer-detail-stats">\n                <div class="customer-stat"><span class="customer-stat-value">' + formatPrice(c.totalSpent || 0) + ' ' + cur + '</span><span class="customer-stat-label">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A</span></div>\n                <div class="customer-stat"><span class="customer-stat-value">' + (c.points || 0) + '</span><span class="customer-stat-label">\u0646\u0642\u0627\u0637</span></div>\n                <div class="customer-stat"><span class="customer-stat-value">' + invoices.length + '</span><span class="customer-stat-label">\u0639\u062F\u062F \u0627\u0644\u0641\u0648\u0627\u062A\u064A\u0631</span></div>\n                <div class="customer-stat"><span class="customer-stat-value" style="color:' + (debt > 0 ? 'var(--danger)' : 'var(--success)') + ';">' + formatPrice(debt) + ' ' + cur + '</span><span class="customer-stat-label">\u0627\u0644\u0645\u062F\u064A\u0648\u0646\u064A\u0629</span></div>\n            </div>\n            <h4 style="margin-bottom:10px;font-size:14px;color:var(--text-light);">\u0633\u062C\u0644 \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A</h4>\n            <div class="table-responsive">\n                <table class="table">\n                    <thead><tr><th>\u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629</th><th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th><th>\u0639\u062F\u062F \u0627\u0644\u0623\u0635\u0646\u0627\u0641</th><th>\u0627\u0644\u0645\u0628\u0644\u063A</th><th>\u0627\u0644\u062D\u0627\u0644\u0629</th></tr></thead>\n                    <tbody>' + invoicesHtml + '</tbody>\n                </table>\n            </div>\n        </div>\n    ';
     document.getElementById('customerDetailModal').style.display = 'block';
 }
 
@@ -1588,7 +1658,7 @@ function addDebtPayment(id) {
     appData.debtPayments.push({ customerId: id, amount: val, date: new Date().toISOString() });
     saveData();
     renderCustomers();
-    showToast('\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u0641\u0639 \u0628\u0646\u062C\u0627\u062D: ' + formatPrice(val) + ' ' + appData.settings.currency, 'success');
+    showToast('\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u0641\u0639 \u0628\u0646\u062C\u0627\u062D: ' + formatPrice(val) + ' ' + cur, 'success');
 }
 
 // Allow customer debt on checkout
@@ -1824,6 +1894,7 @@ document.getElementById('savePurchaseBtn').addEventListener('click', function() 
         }
     });
     saveData();
+    saveMeds();
     purchaseItems = [];
     renderPurchases();
     renderInventory();
@@ -1860,7 +1931,7 @@ function renderPurchases() {
     paged.items.forEach(function(p) {
         let s = p.supplierId ? appData.suppliers.find(function(sx) { return sx.id === p.supplierId; }) : null;
         let tr = document.createElement('tr');
-        tr.innerHTML = '\n            <td>#' + p.id + '</td>\n            <td>' + (s ? escapeHtml(s.name) : '-') + '</td>\n            <td>' + formatDate(p.date) + '</td>\n            <td>' + p.items.length + '</td>\n            <td>' + formatPrice(p.subtotal) + ' ' + appData.settings.currency + '</td>\n            <td>' + formatPrice(p.discount) + ' ' + appData.settings.currency + '</td>\n            <td><strong>' + formatPrice(p.net) + ' ' + appData.settings.currency + '</strong></td>\n            <td><button class="btn btn-sm btn-danger" onclick="deletePurchase(' + p.id + ')">\u062D\u0630\u0641</button></td>\n        ';
+        tr.innerHTML = '\n            <td>#' + p.id + '</td>\n            <td>' + (s ? escapeHtml(s.name) : '-') + '</td>\n            <td>' + formatDate(p.date) + '</td>\n            <td>' + p.items.length + '</td>\n            <td>' + formatPrice(p.subtotal) + ' ' + cur + '</td>\n            <td>' + formatPrice(p.discount) + ' ' + cur + '</td>\n            <td><strong>' + formatPrice(p.net) + ' ' + cur + '</strong></td>\n            <td><button class="btn btn-sm btn-danger" onclick="deletePurchase(' + p.id + ')">\u062D\u0630\u0641</button></td>\n        ';
         tbody.appendChild(tr);
     });
     renderPagination('purchasesPagination', paged.page, paged.pages, 'renderPurchases');
@@ -1893,8 +1964,10 @@ document.getElementById('confirmCancelInvoice').addEventListener('click', functi
     });
     invoice.status = '\u0645\u0644\u063A\u064A\u0629';
     saveData();
+    saveMeds();
     renderDashboard();
     renderReports();
+    renderMedsGrid();
     document.getElementById('cancelInvoiceModal').style.display = 'none';
     showToast('\u062A\u0645 \u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 #' + id + ' \u0648\u0625\u0631\u062C\u0627\u0639 \u0627\u0644\u0645\u062E\u0632\u0648\u0646', 'warning');
 });
@@ -1914,12 +1987,17 @@ function renderDashboard() {
         return days !== null && days >= 0 && days <= 30;
     }).length;
 
-    document.getElementById('todaySales').textContent = formatPrice(todaySales) + ' ' + appData.settings.currency;
+    document.getElementById('todaySales').textContent = formatPrice(todaySales) + ' ' + cur;
     document.getElementById('totalMeds').textContent = medicinesDB.length;
     document.getElementById('lowStock').textContent = lowStock;
     document.getElementById('outOfStock').textContent = outOfStock;
-    document.getElementById('monthlySales').textContent = formatPrice(monthlySales) + ' ' + appData.settings.currency;
+    document.getElementById('monthlySales').textContent = formatPrice(monthlySales) + ' ' + cur;
     document.getElementById('expiringMedsCount').textContent = expiringMeds;
+
+    let todayExpenses = appData.expenses.filter(function(e) { return isToday(e.date); });
+    let expenseToday = todayExpenses.reduce(function(s, e) { return s + e.amount; }, 0);
+    let expenseTodayEl = document.getElementById('expenseTodayCard');
+    if (expenseTodayEl) expenseTodayEl.textContent = formatPrice(expenseToday) + ' ' + cur;
 
     let tbody = document.getElementById('recentSalesBody');
     let recent = appData.invoices.slice().reverse().slice(0, 10);
@@ -1931,7 +2009,7 @@ function renderDashboard() {
             let statusText = getInvoiceStatusText(inv);
             let statusBadge = getInvoiceStatusBadge(statusText);
             let tr2 = document.createElement('tr');
-            tr2.innerHTML = '\n                <td>#' + inv.id + '</td>\n                <td>' + formatPrice(inv.net) + ' ' + appData.settings.currency + '</td>\n                <td>' + formatDate(inv.date) + '</td>\n                <td><span class="badge ' + statusBadge + '">' + statusText + '</span>' + (inv.prescription && inv.prescription.doctor ? ' <span class="rx-icon" title="' + getText('dash.prescription') + '">\uD83D\uDCCB</span>' : '') + '</td>\n                <td>' + (statusText !== '\u0645\u0644\u063A\u064A\u0629' ? '<button class="btn btn-sm btn-danger" onclick="cancelInvoice(' + inv.id + ');renderDashboard();">' + getText('dash.cancel') + '</button>' : '') + '</td>\n            ';
+            tr2.innerHTML = '\n                <td>#' + inv.id + '</td>\n                <td>' + formatPrice(inv.net) + ' ' + cur + '</td>\n                <td>' + formatDate(inv.date) + '</td>\n                <td><span class="badge ' + statusBadge + '">' + statusText + '</span>' + (inv.prescription && inv.prescription.doctor ? ' <span class="rx-icon" title="' + getText('dash.prescription') + '">\uD83D\uDCCB</span>' : '') + '</td>\n                <td>' + (statusText !== '\u0645\u0644\u063A\u064A\u0629' ? '<button class="btn btn-sm btn-danger" onclick="cancelInvoice(' + inv.id + ');renderDashboard();">' + getText('dash.cancel') + '</button>' : '') + '</td>\n            ';
             tbody.appendChild(tr2);
         });
     }
@@ -1990,6 +2068,10 @@ function getFilteredInvoices() {
         let endDate = reportDateTo + 'T23:59:59';
         invoices = invoices.filter(function(inv) { return inv.date <= endDate; });
     }
+    let pmFilter = document.getElementById('reportPaymentMethod')?.value || 'الكل';
+    if (pmFilter !== 'الكل') {
+        invoices = invoices.filter(function(inv) { return (inv.paymentMethod || 'cash') === pmFilter; });
+    }
     return invoices;
 }
 
@@ -2005,7 +2087,6 @@ function renderReports() {
     let monthSales = monthInvs.reduce(function(sum, inv) { return sum + inv.net; }, 0);
     let monthCount = monthInvs.length;
 
-    let cur = appData.settings.currency;
     document.getElementById('reportTodaySales').textContent = formatPrice(todaySales) + ' ' + cur;
     document.getElementById('reportTodayCount').textContent = todayCount;
     document.getElementById('reportMonthSales').textContent = formatPrice(monthSales) + ' ' + cur;
@@ -2013,11 +2094,24 @@ function renderReports() {
     document.getElementById('reportTotalSales').textContent = formatPrice(totalSales) + ' ' + cur;
     document.getElementById('reportTotalCount').textContent = totalCount;
 
-    // Profit calculations
-    let totalProfit = activeInvoices.reduce(function(sum, inv) { return sum + calcProfit(inv); }, 0);
-    let todayProfit = todayInvs.reduce(function(sum, inv) { return sum + calcProfit(inv); }, 0);
-    let monthProfit = monthInvs.reduce(function(sum, inv) { return sum + calcProfit(inv); }, 0);
-    let profitMargin = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
+    // Expense totals for period
+    let filteredExpenses = appData.expenses.slice();
+    if (reportDateFrom) filteredExpenses = filteredExpenses.filter(function(e) { return e.date >= reportDateFrom; });
+    if (reportDateTo) filteredExpenses = filteredExpenses.filter(function(e) { return e.date <= reportDateTo + 'T23:59:59'; });
+    let totalExpenses = filteredExpenses.reduce(function(s, e) { return s + e.amount; }, 0);
+    let todayExpenses = filteredExpenses.filter(function(e) { return isToday(e.date); });
+    let todayExpTotal = todayExpenses.reduce(function(s, e) { return s + e.amount; }, 0);
+    let monthExpenses = filteredExpenses.filter(function(e) { return isThisMonth(e.date); });
+    let monthExpTotal = monthExpenses.reduce(function(s, e) { return s + e.amount; }, 0);
+
+    // Profit calculations (net = gross - expenses)
+    let totalGrossProfit = activeInvoices.reduce(function(sum, inv) { return sum + calcProfit(inv); }, 0);
+    let todayGrossProfit = todayInvs.reduce(function(sum, inv) { return sum + calcProfit(inv); }, 0);
+    let monthGrossProfit = monthInvs.reduce(function(sum, inv) { return sum + calcProfit(inv); }, 0);
+    let totalProfit = totalGrossProfit - totalExpenses;
+    let todayProfit = todayGrossProfit - todayExpTotal;
+    let monthProfit = monthGrossProfit - monthExpTotal;
+    let profitMargin = totalSales > 0 ? (totalGrossProfit / totalSales) * 100 : 0;
 
     let profitTotalEl = document.getElementById('reportTotalProfit');
     let profitMarginEl = document.getElementById('reportProfitMargin');
@@ -2027,6 +2121,8 @@ function renderReports() {
     if (profitMarginEl) profitMarginEl.textContent = formatPrice(profitMargin) + '%';
     if (profitTodayEl) profitTodayEl.textContent = formatPrice(todayProfit) + ' ' + cur;
     if (profitMonthEl) profitMonthEl.textContent = formatPrice(monthProfit) + ' ' + cur;
+    let reportExpTotalEl = document.getElementById('reportTotalExpenses');
+    if (reportExpTotalEl) reportExpTotalEl.textContent = formatPrice(totalExpenses) + ' ' + cur;
 
     // Invoices table
     let sortedInvoices = invoices.slice().reverse();
@@ -2036,23 +2132,27 @@ function renderReports() {
     paged = paginate(sortedInvoices, state.page, state.perPage);
     let tbody = document.getElementById('allInvoicesBody');
     if (invoices.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center empty-state">' + getText('reports.noInvoices') + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center empty-state">' + getText('reports.noInvoices') + '</td></tr>';
         renderPagination('invoicesPagination', paged.page, paged.pages, 'renderReports');
         return;
     }
     tbody.innerHTML = '';
+    let pmLabels = { cash: '💰 نقداً', vodafone: '📱 فودافون كاش', instapay: '💳 إنستا باي', card: '💳 بطاقة', split: '🔀 مقسم' };
     paged.items.forEach(function(inv) {
         let statusText = getInvoiceStatusText(inv);
         let statusBadge = getInvoiceStatusBadge(statusText);
         let canCancel = statusText !== '\u0645\u0644\u063A\u064A\u0629';
         let canReturn = statusText !== '\u0645\u0644\u063A\u064A\u0629' && statusText !== '\u0645\u0631\u062A\u062C\u0639 \u0643\u0644\u064A';
+        let pm = inv.paymentMethod || 'cash';
+        let pmLabel = pmLabels[pm] || '💰 نقداً';
         let tr3 = document.createElement('tr');
-        tr3.innerHTML = '\n            <td>#' + inv.id + '</td>\n            <td>' + formatDate(inv.date) + '</td>\n            <td>' + inv.items.length + '</td>\n            <td>' + formatPrice(inv.subtotal) + ' ' + cur + '</td>\n            <td>' + formatPrice(inv.discount) + ' ' + cur + '</td>\n            <td><strong>' + formatPrice(inv.net) + ' ' + cur + '</strong></td>\n            <td><span class="badge ' + statusBadge + '">' + statusText + '</span></td>\n            <td style="white-space:nowrap;">\n                ' + (canReturn ? '<button class="btn btn-sm btn-warning" onclick="showReturnModal(' + inv.id + ');" style="margin-' + (document.documentElement.dir === 'rtl' ? 'left' : 'right') + ':4px;">' + getText('reports.return') + '</button>' : '') + '\n                ' + (canCancel ? '<button class="btn btn-sm btn-danger" onclick="cancelInvoice(' + inv.id + ');renderReports();">' + getText('reports.cancel') + '</button>' : '') + '\n            </td>\n        ';
+        tr3.innerHTML = '\n            <td>#' + inv.id + '</td>\n            <td>' + formatDate(inv.date) + '</td>\n            <td>' + inv.items.length + '</td>\n            <td>' + formatPrice(inv.subtotal) + ' ' + cur + '</td>\n            <td>' + formatPrice(inv.discount) + ' ' + cur + '</td>\n            <td><strong>' + formatPrice(inv.net) + ' ' + cur + '</strong></td>\n            <td>' + pmLabel + '</td>\n            <td><span class="badge ' + statusBadge + '">' + statusText + '</span></td>\n            <td style="white-space:nowrap;">\n                ' + (canReturn ? '<button class="btn btn-sm btn-warning" onclick="showReturnModal(' + inv.id + ');" style="margin-' + (document.documentElement.dir === 'rtl' ? 'left' : 'right') + ':4px;">' + getText('reports.return') + '</button>' : '') + '\n                ' + (canCancel ? '<button class="btn btn-sm btn-danger" onclick="cancelInvoice(' + inv.id + ');renderReports();">' + getText('reports.cancel') + '</button>' : '') + '\n            </td>\n        ';
         tbody.appendChild(tr3);
     });
     renderPagination('invoicesPagination', paged.page, paged.pages, 'renderReports');
     renderReturnsTable();
     renderProfitChart();
+    renderClosings();
 }
 
 document.getElementById('filterReportsBtn').addEventListener('click', function() {
@@ -2155,7 +2255,7 @@ function showReturnModal(invoiceId) {
         hasItems = true;
         let div = document.createElement('div');
         div.className = 'return-item';
-        div.innerHTML = '\n            <label class="return-item-label">\n                <input type="checkbox" class="return-item-cb" data-id="' + item.id + '" data-max="' + available + '" checked>\n                <span class="return-item-name">' + escapeHtml(item.name) + '</span>\n                <span class="return-item-price">' + formatPrice(item.price * available) + ' ' + appData.settings.currency + '</span>\n            </label>\n            <div class="return-item-qty-wrap">\n                <label>' + getText('returns.qtyLabel') + ' </label>\n                <input type="number" class="return-item-qty form-input" value="' + available + '" min="1" max="' + available + '" style="width:70px;">\n            </div>\n        ';
+        div.innerHTML = '\n            <label class="return-item-label">\n                <input type="checkbox" class="return-item-cb" data-id="' + item.id + '" data-max="' + available + '" checked>\n                <span class="return-item-name">' + escapeHtml(item.name) + '</span>\n                <span class="return-item-price">' + formatPrice(item.price * available) + ' ' + cur + '</span>\n            </label>\n            <div class="return-item-qty-wrap">\n                <label>' + getText('returns.qtyLabel') + ' </label>\n                <input type="number" class="return-item-qty form-input" value="' + available + '" min="1" max="' + available + '" style="width:70px;">\n            </div>\n        ';
         list.appendChild(div);
     });
     if (!hasItems) {
@@ -2205,10 +2305,13 @@ function confirmReturn(invoiceId) {
     });
     invoice.status = getInvoiceStatusText(invoice);
     saveData();
+    saveMeds();
     renderDashboard();
     renderReports();
+    renderMedsGrid();
+    renderInventory();
     document.getElementById('returnModal').style.display = 'none';
-    showToast(getText('returns.success') + ' - ' + returnItems.length + ' ' + getText('returns.items') + ' ' + getText('returns.value') + ' ' + formatPrice(totalReturn) + ' ' + appData.settings.currency, 'success');
+    showToast(getText('returns.success') + ' - ' + returnItems.length + ' ' + getText('returns.items') + ' ' + getText('returns.value') + ' ' + formatPrice(totalReturn) + ' ' + cur, 'success');
 }
 
 function renderReturnsTable() {
@@ -2222,7 +2325,7 @@ function renderReturnsTable() {
     returns.forEach(function(r) {
         let itemsStr = r.items.map(function(ri) { return escapeHtml(ri.name) + ' \u00D7' + ri.qty; }).join(', ');
         let tr = document.createElement('tr');
-        tr.innerHTML = '\n            <td>#' + r.id + '</td>\n            <td>#' + r.invoiceId + '</td>\n            <td>' + formatDate(r.date) + '</td>\n            <td style="font-size:12px;">' + itemsStr + '</td>\n            <td>' + formatPrice(r.total) + ' ' + appData.settings.currency + '</td>\n            <td style="font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(r.reason) + '">' + escapeHtml(r.reason) + '</td>\n        ';
+        tr.innerHTML = '\n            <td>#' + r.id + '</td>\n            <td>#' + r.invoiceId + '</td>\n            <td>' + formatDate(r.date) + '</td>\n            <td style="font-size:12px;">' + itemsStr + '</td>\n            <td>' + formatPrice(r.total) + ' ' + cur + '</td>\n            <td style="font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(r.reason) + '">' + escapeHtml(r.reason) + '</td>\n        ';
         tbody.appendChild(tr);
     });
 }
@@ -2260,6 +2363,7 @@ function saveSettings() {
     appData.settings.receiptFooter = document.getElementById('receiptFooter').value;
     appData.settings.taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
     appData.settings.currency = document.getElementById('currency').value || getText('settings.currencyDefault');
+    updateCur();
     saveData();
     showToast(getText('settings.saved'), 'success');
 }
@@ -2271,7 +2375,8 @@ function resetData() {
             appData = {
                 cart: [], invoices: [], customers: [], suppliers: [], purchases: [],
                 settings: { pharmacyName: 'ValoPOS', address: '', phone: '',         receiptFooter: getText('settings.receiptFooterDefault'), taxRate: 0, currency: '\u062C.\u0645' },
-                nextInvoiceId: 1, nextPurchaseId: 1, nextReturnId: 1, returns: [], stockChanges: []
+                nextInvoiceId: 1, nextPurchaseId: 1, nextReturnId: 1, returns: [], stockChanges: [],
+                nextExpenseId: 1, expenses: [], nextClosingId: 1, closings: []
             };
             saveData();
             renderDashboard();
@@ -2450,7 +2555,7 @@ kh.innerHTML = '\n    <button class="keyboard-hint-close" onclick="this.parentEl
 document.body.appendChild(kh);
 
 // ===== PAGINATION HELPERS =====
-const paginationState = { inventory: {page:1, perPage:50}, customers: {page:1, perPage:50}, suppliers: {page:1, perPage:50}, purchases: {page:1, perPage:50}, invoices: {page:1, perPage:50} };
+const paginationState = { inventory: {page:1, perPage:50}, customers: {page:1, perPage:50}, suppliers: {page:1, perPage:50}, purchases: {page:1, perPage:50}, invoices: {page:1, perPage:50}, expenses: {page:1, perPage:50}, closings: {page:1, perPage:50} };
 
 function paginate(data, page, perPage) {
     const start = (page-1)*perPage;
@@ -2461,14 +2566,253 @@ function renderPagination(containerId, currentPage, totalPages, callback) {
     const container = document.getElementById(containerId);
     if (!container) return;
     if (totalPages <= 1) { container.innerHTML = ''; return; }
+    const keyMap = { 'invPagination': 'inventory', 'customersPagination': 'customers', 'suppliersPagination': 'suppliers', 'purchasesPagination': 'purchases', 'invoicesPagination': 'invoices' };
+    let stateKey = keyMap[containerId] || containerId.replace('Pagination','');
     let html = '<div class="pagination-controls">';
-    html += '<button class="btn btn-sm" onclick="paginationState.' + containerId.replace('Pagination','') + '.page=1;(' + callback + ')();" ' + (currentPage === 1 ? 'disabled' : '') + '>\u00AB</button>';
-    html += '<button class="btn btn-sm" onclick="paginationState.' + containerId.replace('Pagination','') + '.page=' + (currentPage-1) + ';(' + callback + ')();" ' + (currentPage === 1 ? 'disabled' : '') + '>\u2039</button>';
+    html += '<button class="btn btn-sm" onclick="paginationState.' + stateKey + '.page=1;(' + callback + ')();" ' + (currentPage === 1 ? 'disabled' : '') + '\u00AB</button>';
+    html += '<button class="btn btn-sm" onclick="paginationState.' + stateKey + '.page=' + (currentPage-1) + ';(' + callback + ')();" ' + (currentPage === 1 ? 'disabled' : '') + '\u2039</button>';
     html += '<span style="margin:0 8px;font-size:13px;">' + currentPage + ' / ' + totalPages + '</span>';
-    html += '<button class="btn btn-sm" onclick="paginationState.' + containerId.replace('Pagination','') + '.page=' + (currentPage+1) + ';(' + callback + ')();" ' + (currentPage === totalPages ? 'disabled' : '') + '>\u203A</button>';
-    html += '<button class="btn btn-sm" onclick="paginationState.' + containerId.replace('Pagination','') + '.page=' + totalPages + ';(' + callback + ')();" ' + (currentPage === totalPages ? 'disabled' : '') + '>\u00BB</button>';
+    html += '<button class="btn btn-sm" onclick="paginationState.' + stateKey + '.page=' + (currentPage+1) + ';(' + callback + ')();" ' + (currentPage === totalPages ? 'disabled' : '') + '\u203A</button>';
+    html += '<button class="btn btn-sm" onclick="paginationState.' + stateKey + '.page=' + totalPages + ';(' + callback + ')();" ' + (currentPage === totalPages ? 'disabled' : '') + '\u00BB</button>';
     html += '</div>';
     container.innerHTML = html;
+}
+
+// ===== EXPENSE TRACKING =====
+function addExpense() {
+    let modal = document.getElementById('expenseModal');
+    document.getElementById('expenseEditId').value = '';
+    document.getElementById('expenseModalTitle').textContent = 'إضافة مصروف';
+    document.getElementById('expenseCategory').value = 'أخرى';
+    document.getElementById('expenseAmount').value = '';
+    document.getElementById('expenseNotes').value = '';
+    document.getElementById('expenseDate').value = todayStr();
+    modal.style.display = 'block';
+}
+
+function editExpense(id) {
+    let exp = appData.expenses.find(function(e) { return e.id === id; });
+    if (!exp) return;
+    document.getElementById('expenseEditId').value = id;
+    document.getElementById('expenseModalTitle').textContent = 'تعديل مصروف';
+    document.getElementById('expenseCategory').value = exp.category;
+    document.getElementById('expenseAmount').value = exp.amount;
+    document.getElementById('expenseNotes').value = exp.notes || '';
+    document.getElementById('expenseDate').value = exp.date.split('T')[0];
+    document.getElementById('expenseModal').style.display = 'block';
+}
+
+function saveExpense() {
+    let editId = document.getElementById('expenseEditId').value;
+    let category = document.getElementById('expenseCategory').value;
+    let amount = parseFloat(document.getElementById('expenseAmount').value);
+    let notes = document.getElementById('expenseNotes').value.trim();
+    let date = document.getElementById('expenseDate').value;
+    if (!amount || amount <= 0) { showToast('الرجاء إدخال مبلغ صحيح', 'error'); return; }
+    if (!date) { showToast('الرجاء إدخال التاريخ', 'error'); return; }
+    if (editId) {
+        let exp = appData.expenses.find(function(e) { return e.id === parseInt(editId); });
+        if (exp) { exp.category = category; exp.amount = amount; exp.notes = notes; exp.date = date + 'T00:00:00'; }
+        showToast('تم تعديل المصروف', 'success');
+    } else {
+        appData.expenses.push({
+            id: appData.nextExpenseId++,
+            date: date + 'T00:00:00',
+            category: category,
+            amount: amount,
+            notes: notes,
+            createdBy: 'admin'
+        });
+        showToast('تم إضافة المصروف', 'success');
+    }
+    saveData();
+    renderExpenses();
+    renderReports();
+    renderDashboard();
+    document.getElementById('expenseModal').style.display = 'none';
+}
+
+function deleteExpense(id) {
+    if (!confirm('هل أنت متأكد من حذف هذا المصروف؟')) return;
+    appData.expenses = appData.expenses.filter(function(e) { return e.id !== id; });
+    saveData();
+    renderExpenses();
+    renderReports();
+    renderDashboard();
+    showToast('تم حذف المصروف', 'info');
+}
+
+function renderExpenses() {
+    let searchCat = document.getElementById('expenseCatFilter')?.value || 'الكل';
+    let dateFrom = document.getElementById('expenseDateFrom')?.value || '';
+    let dateTo = document.getElementById('expenseDateTo')?.value || '';
+    let expenses = appData.expenses.slice();
+    if (searchCat !== 'الكل') {
+        expenses = expenses.filter(function(e) { return e.category === searchCat; });
+    }
+    if (dateFrom) {
+        expenses = expenses.filter(function(e) { return e.date >= dateFrom; });
+    }
+    if (dateTo) {
+        expenses = expenses.filter(function(e) { return e.date <= dateTo + 'T23:59:59'; });
+    }
+    let totalAmount = expenses.reduce(function(s, e) { return s + e.amount; }, 0);
+    let todayExp = expenses.filter(function(e) { return isToday(e.date); });
+    let todayTotal = todayExp.reduce(function(s, e) { return s + e.amount; }, 0);
+    let thisMonthExp = expenses.filter(function(e) { return isThisMonth(e.date); });
+    let monthTotal = thisMonthExp.reduce(function(s, e) { return s + e.amount; }, 0);
+    let catTotals = {};
+    expenses.forEach(function(e) { catTotals[e.category] = (catTotals[e.category] || 0) + e.amount; });
+    let totalEl = document.getElementById('expenseTotal');
+    if (totalEl) totalEl.textContent = formatPrice(totalAmount) + ' ' + cur;
+    let todayEl = document.getElementById('expenseTodayTotal');
+    if (todayEl) todayEl.textContent = formatPrice(todayTotal) + ' ' + cur;
+    let monthEl = document.getElementById('expenseMonthTotal');
+    if (monthEl) monthEl.textContent = formatPrice(monthTotal) + ' ' + cur;
+    let catHtml = '';
+    for (let cat in catTotals) {
+        catHtml += '<span class="badge badge-info" style="margin:2px;">' + escapeHtml(cat) + ': ' + formatPrice(catTotals[cat]) + ' ' + cur + '</span>';
+    }
+    let catEl = document.getElementById('expenseCategorySummary');
+    if (catEl) catEl.innerHTML = catHtml || '<span class="text-muted">لا توجد مصروفات</span>';
+    let sorted = expenses.slice().reverse();
+    let state = paginationState.expenses;
+    let paged = paginate(sorted, state.page, state.perPage);
+    if (state.page > paged.pages) state.page = 1;
+    paged = paginate(sorted, state.page, state.perPage);
+    let tbody = document.getElementById('expensesBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (expenses.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center empty-state">لا توجد مصروفات</td></tr>';
+        renderPagination('expensesPagination', paged.page, paged.pages, 'renderExpenses');
+        return;
+    }
+    paged.items.forEach(function(e) {
+        let tr = document.createElement('tr');
+        tr.innerHTML = '\n            <td>' + e.id + '</td>\n            <td>' + formatDate(e.date) + '</td>\n            <td><span class="badge badge-info">' + escapeHtml(e.category) + '</span></td>\n            <td><strong>' + formatPrice(e.amount) + ' ' + cur + '</strong></td>\n            <td>' + escapeHtml(e.notes || '') + '</td>\n            <td>\n                <button class="btn btn-sm btn-primary" onclick="editExpense(' + e.id + ')">تعديل</button>\n                <button class="btn btn-sm btn-danger" onclick="deleteExpense(' + e.id + ')">حذف</button>\n            </td>\n        ';
+        tbody.appendChild(tr);
+    });
+    renderPagination('expensesPagination', paged.page, paged.pages, 'renderExpenses');
+}
+
+// ===== DAILY CLOSING (Cash Register) =====
+function openDailyClosing() {
+    let today = todayStr();
+    let existing = appData.closings.find(function(c) { return c.date === today; });
+    if (existing) {
+        showToast('تم إقفال اليوم بالفعل', 'warning');
+        return;
+    }
+    let todayInvs = appData.invoices.filter(function(inv) { return isToday(inv.date) && inv.status !== 'ملغية'; });
+    let expectedCash = 0, expectedCard = 0, expectedVodafone = 0, expectedInstaPay = 0;
+    todayInvs.forEach(function(inv) {
+        let pm = inv.paymentMethod || 'cash';
+        if (pm === 'split') {
+            expectedCash += inv.splitAmount || 0;
+            expectedVodafone += (inv.net - (inv.splitAmount || 0));
+        } else if (pm === 'cash') { expectedCash += inv.net; }
+        else if (pm === 'card') { expectedCard += inv.net; }
+        else if (pm === 'vodafone') { expectedVodafone += inv.net; }
+        else if (pm === 'instapay') { expectedInstaPay += inv.net; }
+        else { expectedCash += inv.net; }
+    });
+    let todayExpenses = appData.expenses.filter(function(e) { return isToday(e.date); });
+    let expensesTotal = todayExpenses.reduce(function(s, e) { return s + e.amount; }, 0);
+    document.getElementById('closingDate').value = today;
+    document.getElementById('closingExpectedCash').value = formatPrice(expectedCash);
+    document.getElementById('closingActualCash').value = formatPrice(expectedCash);
+    document.getElementById('closingExpectedCard').value = formatPrice(expectedCard);
+    document.getElementById('closingActualCard').value = formatPrice(expectedCard);
+    document.getElementById('closingExpectedVodafone').value = formatPrice(expectedVodafone);
+    document.getElementById('closingActualVodafone').value = formatPrice(expectedVodafone);
+    document.getElementById('closingExpectedInstaPay').value = formatPrice(expectedInstaPay);
+    document.getElementById('closingActualInstaPay').value = formatPrice(expectedInstaPay);
+    document.getElementById('closingExpensesToday').value = formatPrice(expensesTotal);
+    document.getElementById('closingNotes').value = '';
+    document.getElementById('closingDiff').textContent = '0.00';
+    document.getElementById('dailyClosingModal').style.display = 'block';
+}
+
+function calcClosingDiff() {
+    let expected = parseFloat(document.getElementById('closingExpectedCash').value) || 0;
+    let actual = parseFloat(document.getElementById('closingActualCash').value) || 0;
+    let diff = actual - expected;
+    document.getElementById('closingDiff').textContent = formatPrice(diff);
+    let el = document.getElementById('closingDiff');
+    if (diff > 0) el.style.color = 'var(--success)';
+    else if (diff < 0) el.style.color = 'var(--danger)';
+    else el.style.color = 'var(--text)';
+}
+
+function confirmDailyClosing() {
+    let today = todayStr();
+    if (appData.closings.find(function(c) { return c.date === today; })) {
+        showToast('تم إقفال اليوم بالفعل', 'warning');
+        document.getElementById('dailyClosingModal').style.display = 'none';
+        return;
+    }
+    let expectedCash = parseFloat(document.getElementById('closingExpectedCash').value) || 0;
+    let actualCash = parseFloat(document.getElementById('closingActualCash').value) || 0;
+    let expectedCard = parseFloat(document.getElementById('closingExpectedCard').value) || 0;
+    let actualCard = parseFloat(document.getElementById('closingActualCard').value) || 0;
+    let expectedVodafone = parseFloat(document.getElementById('closingExpectedVodafone').value) || 0;
+    let actualVodafone = parseFloat(document.getElementById('closingActualVodafone').value) || 0;
+    let expectedInstaPay = parseFloat(document.getElementById('closingExpectedInstaPay').value) || 0;
+    let actualInstaPay = parseFloat(document.getElementById('closingActualInstaPay').value) || 0;
+    let expensesToday = parseFloat(document.getElementById('closingExpensesToday').value) || 0;
+    let notes = document.getElementById('closingNotes').value.trim();
+    let difference = actualCash - expectedCash;
+    let diffText = difference >= 0 ? ' فائض: ' + formatPrice(difference) : ' عجز: ' + formatPrice(Math.abs(difference));
+    appData.closings.push({
+        id: appData.nextClosingId++,
+        date: today,
+        expectedCash: expectedCash, actualCash: actualCash,
+        expectedCard: expectedCard, actualCard: actualCard,
+        expectedVodafone: expectedVodafone, actualVodafone: actualVodafone,
+        expectedInstaPay: expectedInstaPay, actualInstaPay: actualInstaPay,
+        expensesToday: expensesToday,
+        difference: difference,
+        notes: notes,
+        createdBy: 'admin',
+        closedAt: new Date().toISOString()
+    });
+    saveData();
+    document.getElementById('dailyClosingModal').style.display = 'none';
+    showToast('تم إقفال اليوم بنجاح -' + diffText, difference >= 0 ? 'success' : 'warning');
+    renderReports();
+    renderDashboard();
+}
+
+function checkTodayClosing() {
+    let today = todayStr();
+    if (appData.closings.find(function(c) { return c.date === today; })) {
+        showToast('اليوم مقفل بالفعل', 'info');
+    }
+}
+
+function renderClosings() {
+    let closings = (appData.closings || []).slice().reverse();
+    let state = paginationState.closings;
+    let paged = paginate(closings, state.page, state.perPage);
+    if (state.page > paged.pages) state.page = 1;
+    paged = paginate(closings, state.page, state.perPage);
+    let tbody = document.getElementById('closingsBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (closings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center empty-state">لا توجد إقفالات سابقة</td></tr>';
+        renderPagination('closingsPagination', paged.page, paged.pages, 'renderClosings');
+        return;
+    }
+    paged.items.forEach(function(c) {
+        let diffText = c.difference >= 0 ? 'فائض' : 'عجز';
+        let diffClass = c.difference >= 0 ? 'badge-success' : 'badge-danger';
+        let tr = document.createElement('tr');
+        tr.innerHTML = '\n            <td>#' + c.id + '</td>\n            <td>' + c.date + '</td>\n            <td>' + formatPrice(c.expectedCash) + ' ' + cur + '</td>\n            <td>' + formatPrice(c.actualCash) + ' ' + cur + '</td>\n            <td>' + formatPrice(c.expensesToday) + ' ' + cur + '</td>\n            <td><span class="badge ' + diffClass + '">' + diffText + ' ' + formatPrice(Math.abs(c.difference)) + '</span></td>\n            <td>' + escapeHtml(c.notes || '') + '</td>\n            <td>' + formatDate(c.closedAt) + '</td>\n        ';
+        tbody.appendChild(tr);
+    });
+    renderPagination('closingsPagination', paged.page, paged.pages, 'renderClosings');
 }
 
 // ===== INIT =====
