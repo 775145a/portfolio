@@ -2301,6 +2301,67 @@ textarea.form-input {
     font-weight: 500;
 }
 
+[data-theme="valopos-dark"] .sidebar-user {
+    background: rgba(255,255,255,0.06);
+}
+
+/* ====== Autocomplete, Schedule Badge, Return Item ====== */
+.autocomplete-dropdown { position:absolute; top:100%; left:0; right:0; background:var(--bg-card); border:1px solid var(--border); border-radius:0 0 8px 8px; box-shadow:var(--shadow-lg); z-index:500; max-height:200px; overflow-y:auto; }
+.autocomplete-item { padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--border-light); font-size:13px; transition:var(--transition); }
+.autocomplete-item:hover { background:var(--primary); color:#fff; }
+.schedule-badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+.schedule-badge.normal { background:#e8f5e9; color:#2e7d32; }
+.schedule-badge.schedule1 { background:#ffebee; color:#c62828; }
+.schedule-badge.schedule2 { background:#fff3e0; color:#e65100; }
+.schedule-badge.schedule3 { background:#fff8e1; color:#f57f17; }
+.return-item { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border-light); }
+.return-item-label { display:flex; align-items:center; gap:8px; cursor:pointer; flex:1; }
+.return-item-name { font-size:13px; font-weight:500; flex:1; }
+.return-item-price { font-size:12px; color:var(--text-light); }
+.return-item-qty-wrap { display:flex; align-items:center; gap:6px; font-size:13px; }
+
+/* ====== New [data-theme="dark"] theme (Feature 7) ====== */
+[data-theme="dark"] {
+    --bg: #0a0a0f;
+    --bg-alt: #111118;
+    --bg-card: #16161f;
+    --card-hover: #1c1c2a;
+    --text: #e8e8f0;
+    --text-light: #9898b0;
+    --text-muted: #5a5a72;
+    --border: #2a2a3a;
+    --border-light: #1e1e2e;
+    --shadow: 0 1px 3px rgba(0,0,0,0.5);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.6);
+    --shadow-lg: 0 10px 25px rgba(0,0,0,0.7);
+    --shadow-xl: 0 20px 50px rgba(0,0,0,0.8);
+    --header-blur: rgba(22,22,31,0.88);
+    --sidebar-bg: linear-gradient(170deg, #05050a 0%, #0a0a14 35%, #120f24 70%, #0f0d1e 100%);
+}
+[data-theme="dark"] .stat-card.primary .stat-icon { background: rgba(99,102,241,0.12); }
+[data-theme="dark"] .stat-card.success .stat-icon { background: rgba(16,185,129,0.12); }
+[data-theme="dark"] .stat-card.warning .stat-icon { background: rgba(245,158,11,0.12); }
+[data-theme="dark"] .stat-card.danger .stat-icon  { background: rgba(239,68,68,0.12); }
+[data-theme="dark"] .stat-card.info .stat-icon    { background: rgba(6,182,212,0.12); }
+[data-theme="dark"] .stat-card.purple .stat-icon  { background: rgba(168,85,247,0.12); }
+[data-theme="dark"] .table th { background: var(--bg); }
+[data-theme="dark"] .cart-item-remove:hover { background: rgba(239,68,68,0.15); }
+[data-theme="dark"] .modal-close:hover { background: rgba(239,68,68,0.15); }
+[data-theme="dark"] .top-header { background: var(--header-blur); border-bottom-color: var(--border); }
+[data-theme="dark"] .header-theme-toggle { border-color: var(--border); color: var(--text-muted); }
+[data-theme="dark"] .header-theme-toggle:hover { background: rgba(99,102,241,0.1); color: var(--primary-light); border-color: var(--primary); }
+[data-theme="dark"] .sidebar-user { background: rgba(255,255,255,0.05); }
+
+.theme-toggle-btn.dark-mode-active {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.85);
+}
+
+.header-theme-toggle.dark-mode-active {
+    border-color: var(--primary);
+    color: var(--primary-light);
+}
+
 @media (max-width: 600px) {
     .auth-card { max-width: 100%; border-radius: var(--radius); }
     .auth-brand { padding: 28px 20px 20px; }

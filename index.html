@@ -6,8 +6,10 @@
     <title>ValoPOS - نظام كاشير الصيدلية</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="/icons/icon.svg">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="blue">
+    <meta name="apple-mobile-web-app-title" content="ValoPOS">
     <link rel="canonical" href="https://valopos.vercel.app/" />
     <meta name="theme-color" content="#1a73e8">
     <meta name="description" content="ValoPOS - نظام كاشير وإدارة صيدليات متكامل. فواتير، مخزون، عملاء، تقارير. من تصميم محمد أحمد مكرم." />
@@ -78,12 +80,20 @@
                     <span class="nav-icon">&#x1F4B0;</span>
                     <span>المصروفات</span>
                 </a>
+                <a href="#" class="nav-item" data-page="insurance">
+                    <span class="nav-icon">&#x1F3E5;</span>
+                    <span>التأمين الصحي</span>
+                </a>
                 <a href="#" class="nav-item" data-page="settings">
                     <span class="nav-icon">&#x2699;&#xFE0F;</span>
                     <span>الإعدادات</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
+                <div class="sidebar-user" id="sidebarUser" style="display:none;">
+                    <span class="sidebar-user-name">المدير</span>
+                    <button class="btn btn-sm btn-danger" onclick="authLogout()" style="padding:2px 8px;font-size:11px;background:rgba(239,68,68,0.2);color:#ef4444;border:none;border-radius:4px;cursor:pointer;">خروج</button>
+                </div>
                 <button class="theme-toggle-btn" id="valoposThemeToggle" aria-label="Toggle theme">
                     <i class="fas fa-moon"></i>
                 </button>
@@ -173,47 +183,13 @@
                         </div>
                     </div>
                 </div>
-                <div class="dashboard-grid">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>آخر المبيعات</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table" id="recentSalesTable">
-                                    <thead>
-                                        <tr><th>الفاتورة</th><th>المبلغ</th><th>التاريخ</th><th>الحالة</th><th></th></tr>
-                                    </thead>
-                                    <tbody id="recentSalesBody">
-                                        <tr><td colspan="4" class="text-center empty-state">لا توجد مبيعات بعد</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>الأدوية الأكثر مبيعاً</h3>
-                        </div>
-                        <div class="card-body">
-                            <ul class="top-meds-list" id="topMedsList">
-                                <li class="text-center empty-state">لا توجد بيانات بعد</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="card" id="expiryAlertCard" style="margin-top:20px;">
+                <!-- الفواتير المعلقة -->
+                <div class="card" style="margin-top:12px;" id="parkedSalesSection">
                     <div class="card-header">
-                        <h3>&#x23F3; أدوية قرب الانتهاء</h3>
-                        <span class="badge badge-danger" id="expiryAlertCount">0</span>
+                        <h3>&#x1F4CC; الفواتير المعلقة <span class="badge badge-warning" id="parkedSalesCount">0</span></h3>
                     </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead><tr><th>الدواء</th><th>تاريخ الصلاحية</th><th>الأيام المتبقية</th><th>المخزون</th></tr></thead>
-                                <tbody id="expiryAlertBody"></tbody>
-                            </table>
-                        </div>
+                    <div class="card-body" id="parkedSalesList">
+                        <p class="text-center empty-state">لا توجد فواتير معلقة</p>
                     </div>
                 </div>
             </section>
@@ -249,6 +225,18 @@
                                 <option value="">بدون عميل</option>
                             </select>
                             <button class="btn btn-sm btn-primary" id="quickAddCustomerBtn" title="إضافة عميل جديد">+</button>
+                        </div>
+                        <div class="cart-insurance" style="padding:8px 16px;border-bottom:1px solid var(--border-light);background:var(--bg);">
+                            <select id="cartInsurance" class="form-select" style="width:100%;font-size:12px;padding:6px 10px;">
+                                <option value="">بدون تأمين</option>
+                            </select>
+                            <div id="insuranceInfo" style="font-size:11px;margin-top:4px;color:var(--text-light);display:none;"></div>
+                        </div>
+                        <div class="cart-wholesale-toggle" style="padding:6px 16px;border-bottom:1px solid var(--border-light);display:flex;gap:8px;align-items:center;">
+                            <select id="priceTypeToggle" class="form-select" style="flex:1;font-size:12px;padding:4px 8px;">
+                                <option value="retail">قطاعي</option>
+                                <option value="wholesale">جملة</option>
+                            </select>
                         </div>
                         <div class="cart-prescription">
                             <div class="prescription-toggle" onclick="togglePrescriptionSection()">
@@ -312,6 +300,7 @@
                                 <span class="cart-change" id="cartChange">0.00 ج.م</span>
                             </div>
                             <button class="btn btn-success btn-block" id="checkoutBtn">&#x2705; إتمام البيع</button>
+                            <button class="btn btn-warning btn-block" id="parkSaleBtn">&#x1F4CC; تعليق</button>
                             <button class="btn btn-secondary btn-block" id="printReceiptBtn">&#x1F5A8; طباعة الفاتورة</button>
                         </div>
                     </div>
@@ -358,6 +347,7 @@
                                     <th>تاريخ الصلاحية</th>
                                     <th>الحالة</th>
                                     <th>وصفة</th>
+                                    <th>الجدول</th>
                                     <th>إجراءات</th>
                                 </tr>
                             </thead>
@@ -481,6 +471,8 @@
                     <button class="btn btn-sm btn-primary" id="filterReportsBtn">تصفية</button>
                     <button class="btn btn-sm btn-success" id="exportCsvBtn">تصدير CSV</button>
                     <button class="btn btn-sm btn-warning" onclick="openDailyClosing()">🔒 إقفال اليوم</button>
+                    <button class="btn btn-sm btn-danger" onclick="showScheduleReport()">📋 تقرير جدول</button>
+                    <button class="btn btn-sm btn-info" onclick="showAuditLog()">📝 سجل النشاطات</button>
                 </div>
                 <div class="reports-grid">
                     <div class="card">
@@ -553,6 +545,30 @@
                             <table class="table" id="returnsTable">
                                 <thead><tr><th>#</th><th>الفاتورة</th><th>التاريخ</th><th>الأصناف</th><th>الإجمالي</th><th>السبب</th></tr></thead>
                                 <tbody id="returnsBody"><tr><td colspan="6" class="text-center empty-state">لا توجد مرتجعات بعد</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card full-width" id="scheduleReportCard" style="display:none;">
+                        <div class="card-header">
+                            <h3>📋 تقرير مبيعات الجدول</h3>
+                            <button class="btn btn-sm btn-secondary" onclick="document.getElementById('scheduleReportCard').style.display='none'">إخفاء</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead><tr><th>#</th><th>الدواء</th><th>الجدول</th><th>الكمية</th><th>العميل</th><th>التاريخ</th></tr></thead>
+                                <tbody id="scheduleReportBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card full-width" id="auditLogCard" style="display:none;">
+                        <div class="card-header">
+                            <h3>📝 سجل النشاطات</h3>
+                            <button class="btn btn-sm btn-secondary" onclick="document.getElementById('auditLogCard').style.display='none'">إخفاء</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead><tr><th>#</th><th>التاريخ</th><th>المستخدم</th><th>الإجراء</th><th>التفاصيل</th></tr></thead>
+                                <tbody id="auditLogBody"></tbody>
                             </table>
                         </div>
                     </div>
@@ -629,6 +645,31 @@
                 <div id="expensesPagination" class="pagination"></div>
             </section>
 
+            <!-- ===== صفحة التأمين الصحي ===== -->
+            <section class="page" id="page-insurance">
+                <div class="page-header">
+                    <h1>التأمين الصحي</h1>
+                    <button class="btn btn-primary" onclick="showInsuranceModal()">+ شركة تأمين جديدة</button>
+                </div>
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table" id="insuranceTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>اسم الشركة</th>
+                                    <th>نسبة الخصم</th>
+                                    <th>الهاتف</th>
+                                    <th>ملاحظات</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="insuranceBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
             <!-- ===== صفحة الإعدادات ===== -->
             <section class="page" id="page-settings">
                 <div class="page-header">
@@ -659,6 +700,78 @@
                                 <input type="number" id="taxRate" class="form-input" min="0" max="100" step="0.5" value="0">
                             </div>
                             <div class="form-group">
+                                <label>الرقم الضريبي</label>
+                                <input type="text" id="taxNumberInput" class="form-input" placeholder="مثال: 123-456-789">
+                            </div>
+                            <div class="form-group">
+                                <label>العملة</label>
+                                <input type="text" id="currency" class="form-input" value="ج.م">
+                            </div>
+                            <button class="btn btn-primary" onclick="saveSettings()">حفظ الإعدادات</button>
+                        </div>
+                    </div>
+                    <div class="card" id="usersManagementCard">
+                        <div class="card-header"><h3>إدارة المستخدمين</h3></div>
+                        <div class="card-body">
+                            <button class="btn btn-primary btn-block" onclick="showUserModal()">+ مستخدم جديد</button>
+                            <div style="margin-top:10px;">
+                                <table class="table">
+                                    <thead><tr><th>#</th><th>الاسم</th><th>المستخدم</th><th>الدور</th><th>إجراءات</th></tr></thead>
+                                    <tbody id="usersTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><h3>البيانات والنسخ الاحتياطي</h3></div>
+                        <div class="card-body">
+                            <button class="btn btn-warning btn-block" onclick="resetData()">&#x1F5D1; مسح جميع البيانات</button>
+                            <button class="btn btn-success btn-block" onclick="downloadBackup()">&#x1F4BE; تحميل نسخة احتياطية</button>
+                            <button class="btn btn-info btn-block" onclick="importBackup()">&#x1F4C2; استيراد نسخة احتياطية</button>
+                            <button class="btn btn-secondary btn-block" onclick="exportInventoryCSV()">&#x1F4CA; تصدير المخزون CSV</button>
+                        </div>
+                    </div>
+                    <div class="card full-width" id="insuranceClaimsCard" style="display:none;">
+                        <div class="card-header"><h3>مطالبات التأمين</h3></div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead><tr><th>شركة التأمين</th><th>إجمالي المطالبات</th><th>عدد الفواتير</th></tr></thead>
+                                    <tbody id="insuranceClaimsBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-grid">
+                    <div class="card">
+                        <div class="card-header"><h3>معلومات الصيدلية</h3></div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>اسم الصيدلية</label>
+                                <input type="text" id="pharmacyName" class="form-input" value="ValoPOS">
+                            </div>
+                            <div class="form-group">
+                                <label>العنوان</label>
+                                <input type="text" id="pharmacyAddress" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label>رقم التليفون</label>
+                                <input type="text" id="pharmacyPhone" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label>تذييل الفاتورة</label>
+                                <textarea id="receiptFooter" class="form-input" rows="2" placeholder="شكراً لتعاملكم معنا"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>نسبة الضريبة (%)</label>
+                                <input type="number" id="taxRate" class="form-input" min="0" max="100" step="0.5" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label>الرقم الضريبي</label>
+                                <input type="text" id="taxNumberInput" class="form-input" placeholder="مثال: 123-456-789">
+                            </div>
+                            <div class="form-group">
                                 <label>العملة</label>
                                 <input type="text" id="currency" class="form-input" value="ج.م">
                             </div>
@@ -672,6 +785,7 @@
                             <button class="btn btn-success btn-block" onclick="downloadBackup()">&#x1F4BE; تحميل نسخة احتياطية</button>
                             <button class="btn btn-info btn-block" onclick="importBackup()">&#x1F4C2; استيراد نسخة احتياطية</button>
                             <button class="btn btn-secondary btn-block" onclick="exportInventoryCSV()">&#x1F4CA; تصدير المخزون CSV</button>
+                            <button id="installAppBtn" class="btn btn-success btn-block" style="display:none;margin-top:12px;">&#x1F4F2; تثبيت التطبيق</button>
                         </div>
                     </div>
                 </div>
@@ -748,6 +862,23 @@
             <div class="form-group">
                 <label>الباركود</label>
                 <input type="text" id="newMedBarcode" class="form-input" placeholder="رقم الباركود">
+            </div>
+            <div class="form-group">
+                <label>التصنيف الرقابي</label>
+                <select id="medSchedule" class="form-select">
+                    <option value="normal">عادي</option>
+                    <option value="schedule1">جدول أول (مخدر)</option>
+                    <option value="schedule2">جدول ثاني</option>
+                    <option value="schedule3">جدول ثالث</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>سعر الجملة</label>
+                <input type="number" id="newMedWholesalePrice" class="form-input" min="0" step="0.5" placeholder="0.00" value="0">
+            </div>
+            <div class="form-group">
+                <label>الحد الأدنى للجملة</label>
+                <input type="number" id="newMedMinWholesaleQty" class="form-input" min="1" value="10">
             </div>
             <div class="form-group">
                 <label><input type="checkbox" id="newMedRx"> يحتاج وصفة طبية</label>
@@ -980,6 +1111,105 @@
         </div>
     </div>
 
+    <!-- مودال شركة تأمين -->
+    <div class="modal" id="insuranceModal">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="modal-close">&times;</span>
+            <h2 id="insuranceModalTitle">إضافة شركة تأمين</h2>
+            <input type="hidden" id="insuranceEditId" value="">
+            <div class="form-group">
+                <label>اسم الشركة <span class="required">*</span></label>
+                <input type="text" id="insuranceNameInput" class="form-input" placeholder="اسم شركة التأمين">
+            </div>
+            <div class="form-group">
+                <label>نسبة الخصم (%)</label>
+                <input type="number" id="insuranceDiscountInput" class="form-input" min="0" max="100" step="0.5" value="0">
+            </div>
+            <div class="form-group">
+                <label>رقم الهاتف</label>
+                <input type="tel" id="insurancePhoneInput" class="form-input" placeholder="رقم الهاتف">
+            </div>
+            <div class="form-group">
+                <label>ملاحظات</label>
+                <textarea id="insuranceNotesInput" class="form-input" rows="2" placeholder="ملاحظات"></textarea>
+            </div>
+            <button class="btn btn-success btn-block" onclick="saveInsurance()">حفظ</button>
+        </div>
+    </div>
+
+    <!-- مودال مورد -->
+    <div class="modal" id="supplierPaymentModal">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="modal-close">&times;</span>
+            <h2>إضافة دفعة للمورد</h2>
+            <input type="hidden" id="supplierPaymentSupplierId" value="">
+            <div class="form-group">
+                <label>المبلغ <span class="required">*</span></label>
+                <input type="number" id="supplierPaymentAmount" class="form-input" min="0" step="0.5" placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label>طريقة الدفع</label>
+                <select id="supplierPaymentMethod" class="form-select">
+                    <option value="cash">نقداً</option>
+                    <option value="bank">تحويل بنكي</option>
+                    <option value="cheque">شيك</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>البيان</label>
+                <textarea id="supplierPaymentNotes" class="form-input" rows="2" placeholder="ملاحظات"></textarea>
+            </div>
+            <button class="btn btn-success btn-block" onclick="saveSupplierPayment()">حفظ الدفعة</button>
+        </div>
+    </div>
+
+    <!-- مودال مرتجع شراء -->
+    <div class="modal" id="purchaseReturnModal">
+        <div class="modal-content" style="max-width:550px;">
+            <span class="modal-close">&times;</span>
+            <h2>مرتجع فاتورة شراء #<span id="purchaseReturnPurchaseId"></span></h2>
+            <div id="purchaseReturnItemsList" class="return-items-list"></div>
+            <div class="form-group">
+                <label>سبب الإرجاع</label>
+                <textarea id="purchaseReturnReason" class="form-input" rows="2" placeholder="سبب الإرجاع"></textarea>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:15px;">
+                <button class="btn btn-success" onclick="confirmPurchaseReturn()" style="flex:1;">تأكيد الإرجاع</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('purchaseReturnModal').style.display='none'" style="flex:1;">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- مودال إدارة المستخدمين -->
+    <div class="modal" id="userModal">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="modal-close">&times;</span>
+            <h2 id="userModalTitle">إضافة مستخدم</h2>
+            <input type="hidden" id="userEditId" value="">
+            <div class="form-group">
+                <label>الاسم <span class="required">*</span></label>
+                <input type="text" id="userNameInput" class="form-input" placeholder="الاسم الكامل">
+            </div>
+            <div class="form-group">
+                <label>اسم المستخدم <span class="required">*</span></label>
+                <input type="text" id="userUsernameInput" class="form-input" placeholder="اسم المستخدم">
+            </div>
+            <div class="form-group">
+                <label>كلمة المرور</label>
+                <input type="password" id="userPasswordInput" class="form-input" placeholder="كلمة المرور (اترك فارغاً إذا لم ترد التغيير)">
+            </div>
+            <div class="form-group">
+                <label>الدور</label>
+                <select id="userRoleInput" class="form-select">
+                    <option value="admin">مدير</option>
+                    <option value="cashier">كاشير</option>
+                    <option value="pharmacist">صيدلي</option>
+                </select>
+            </div>
+            <button class="btn btn-success btn-block" onclick="saveUser()">حفظ</button>
+        </div>
+    </div>
+
     <!-- مودال الإقفال اليومي (الندرة) -->
     <div class="modal" id="dailyClosingModal">
         <div class="modal-content" style="max-width:500px;">
@@ -1050,6 +1280,10 @@
             <div class="auth-body" id="authBody">
                 <div class="auth-form" id="loginForm">
                     <div class="form-group">
+                        <label class="form-label">اسم المستخدم</label>
+                        <input type="text" class="form-input" id="authUsername" placeholder="اسم المستخدم" maxlength="50" value="admin">
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">كلمة المرور</label>
                         <input type="password" class="form-input" id="authPassword" placeholder="أدخل كلمة المرور" maxlength="50" autofocus>
                     </div>
@@ -1085,6 +1319,34 @@
     <script src="js/medicines.js"></script>
     <script src="js/api.js"></script>
     <script src="js/app.js"></script>
+
+    <script>
+    var deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        var btn = document.getElementById('installAppBtn');
+        if (btn) btn.style.display = 'block';
+    });
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'installAppBtn') {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(function(result) {
+                    if (result.outcome === 'accepted') { console.log('App installed'); }
+                    deferredPrompt = null;
+                    document.getElementById('installAppBtn').style.display = 'none';
+                });
+            }
+        }
+    });
+    window.addEventListener('appinstalled', function() {
+        deferredPrompt = null;
+        var btn = document.getElementById('installAppBtn');
+        if (btn) btn.style.display = 'none';
+        console.log('ValoPOS installed successfully');
+    });
+    </script>
 
   <a href="https://wa.me/201003677165?text=مرحباً%20محمد%2C%20أنا%20مهتم%20بـ%20ValoPOS" class="whatsapp-float" target="_blank" rel="noopener" aria-label="واتساب">
     <i class="fab fa-whatsapp"></i>

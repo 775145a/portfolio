@@ -4,13 +4,24 @@
   "description": "نظام كاشير وإدارة صيدليات متكامل - فواتير، مخزون، عملاء، تقارير",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "any",
+  "orientation": "portrait-primary",
   "background_color": "#1a73e8",
   "theme_color": "#1a73e8",
   "dir": "rtl",
   "lang": "ar",
-  "categories": ["business", "finance", "health"],
+  "categories": ["business", "health", "shopping"],
+  "iarc_rating_id": "e8c4a3b2-1d5f-4a7e-9c6b-0f2d8e1a3b7c",
+  "prefer_related_applications": false,
+  "screenshots": [
+    { "src": "/icons/icon.svg", "sizes": "512x512", "type": "image/svg+xml", "form_factor": "wide" }
+  ],
   "icons": [
-    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "/icons/icon.svg", "sizes": "72x72", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icons/icon.svg", "sizes": "96x96", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icons/icon.svg", "sizes": "128x128", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icons/icon.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icons/icon.svg", "sizes": "256x256", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icons/icon.svg", "sizes": "384x384", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icons/icon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }
