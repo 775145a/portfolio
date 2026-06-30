@@ -2999,3 +2999,53 @@ textarea.form-input {
     align-items: center;
 }
 .compound-ing-row select { flex: 1; }
+
+/* ====== LTR Overrides ====== */
+[dir="ltr"] .sidebar {
+    right: auto;
+    left: 0;
+    border-left: none;
+    border-right: 1px solid rgba(255,255,255,0.03);
+    animation: fadeInRight 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+[dir="ltr"] .main-content {
+    margin-right: 0;
+    margin-left: var(--sidebar-width);
+}
+[dir="ltr"] .keyboard-hint {
+    left: auto;
+    right: 16px;
+}
+[dir="ltr"] .keyboard-hint-close {
+    left: auto;
+    right: 4px;
+}
+[dir="ltr"] .search-suggestion-price {
+    text-align: right;
+}
+@media (max-width: 992px) {
+    [dir="ltr"] .sidebar {
+        right: auto;
+        left: -100%;
+    }
+    [dir="ltr"] .sidebar.open {
+        left: 0;
+        right: auto;
+    }
+    [dir="ltr"] .main-content {
+        margin-left: 0;
+    }
+}
+@media (max-width: 768px) {
+    [dir="ltr"] .sidebar {
+        right: auto;
+        left: -100%;
+    }
+    [dir="ltr"] .sidebar.open {
+        left: 0;
+        right: auto;
+    }
+    [dir="ltr"] .main-content {
+        margin-left: 0;
+    }
+}
