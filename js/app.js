@@ -1029,6 +1029,10 @@ function loadData() {
             let parsed = JSON.parse(saved);
             appData = { ...appData, ...parsed };
             appData.settings = { ...appData.settings, ...parsed.settings };
+            if (!appData.users || appData.users.length === 0) {
+                appData.users = [{ id: 1, username: 'admin', password: 'admin123', role: 'admin', name: 'المدير' }];
+                appData.nextUserId = 2;
+            }
         } catch (e) {
             console.error('Error loading data');
         }
@@ -4019,26 +4023,37 @@ loadCustomerSelect();
 let authData = { password: localStorage.getItem('valopos_auth_pass') || 'admin123', locked: true };
 
 function authLogin() {
-    const username = document.getElementById('authUsername').value.trim();
-    const pass = document.getElementById('authPassword').value.trim();
-    const error = document.getElementById('authError');
-    var user = (appData.users || []).find(function(u) { return (u.username === username || u.username === 'admin') && u.password === pass; });
-    if (!user) {
-        user = (appData.users || []).find(function(u) { return u.password === pass && u.username === 'admin'; });
-    }
-    if (user) {
-        currentUser = user;
-        authData.locked = false;
-        document.getElementById('authOverlay').style.display = 'none';
-        error.textContent = '';
-        document.getElementById('authPassword').value = '';
-        document.getElementById('authUsername').value = '';
-        document.getElementById('headerAvatar').textContent = user.name.charAt(0);
-        document.querySelector('.sidebar-user-name').textContent = user.name + ' (' + (user.role === 'admin' ? 'مدير' : user.role === 'cashier' ? 'كاشير' : 'صيدلي') + ')';
-        audit('login', 'تسجيل دخول المستخدم: ' + user.name);
-        renderUserSpecificUI();
-    } else {
-        error.textContent = getText('auth.errorWrong');
+    try {
+        const username = document.getElementById('authUsername').value.trim();
+        const pass = document.getElementById('authPassword').value.trim();
+        const error = document.getElementById('authError');
+        if (!appData.users || appData.users.length === 0) {
+            appData.users = [{ id: 1, username: 'admin', password: 'admin123', role: 'admin', name: 'المدير' }];
+            appData.nextUserId = 2;
+        }
+        var user = appData.users.find(function(u) { return u.username === username && u.password === pass; });
+        if (!user) {
+            user = appData.users.find(function(u) { return u.username === 'admin' && u.password === pass; });
+        }
+        if (user) {
+            currentUser = user;
+            authData.locked = false;
+            document.getElementById('authOverlay').style.display = 'none';
+            error.textContent = '';
+            document.getElementById('authPassword').value = '';
+            var avatar = document.getElementById('headerAvatar');
+            if (avatar) avatar.textContent = user.name.charAt(0);
+            var sname = document.querySelector('.sidebar-user-name');
+            if (sname) sname.textContent = user.name + ' (' + (user.role === 'admin' ? 'مدير' : user.role === 'cashier' ? 'كاشير' : 'صيدلي') + ')';
+            audit('login', 'تسجيل دخول المستخدم: ' + user.name);
+            renderUserSpecificUI();
+        } else {
+            error.textContent = getText('auth.errorWrong');
+        }
+    } catch (e) {
+        console.error('Login error:', e);
+        var error = document.getElementById('authError');
+        if (error) error.textContent = 'خطأ في تسجيل الدخول';
     }
 }
 
