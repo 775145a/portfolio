@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link rel="stylesheet" href="css/style.css?v=20260701">
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <style>
       :root {
         --primary: #2563eb;
@@ -987,6 +988,23 @@
                             <button class="btn btn-warning btn-block" style="margin-top:10px;" onclick="resetData()">&#x1F5D1; <span data-i18n="set.clearData">مسح جميع البيانات</span></button>
                         </div>
                     </div>
+                    <div class="card full-width" id="cloudSyncCard">
+                        <div class="card-header"><h3>☁️ المزامنة السحابية</h3></div>
+                        <div class="card-body">
+                            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">ارفع بياناتك إلى السحابة للنسخ الاحتياطي والمزامنة بين الأجهزة</p>
+                            <div class="form-group" style="margin-bottom:8px;">
+                                <label>رابط الخادم (Server URL)</label>
+                                <input type="text" id="cloudServerUrl" class="form-input" placeholder="http://localhost:3000" onchange="saveCloudServerUrl()">
+                            </div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                <button class="btn btn-primary" onclick="cloudBackup()">&#x1F4E4; رفع نسخة للسحابة</button>
+                                <button class="btn btn-info" onclick="showCloudRestoreDialog()">&#x1F4E5; استعادة من السحابة</button>
+                                <button class="btn btn-success" onclick="cloudSync()">&#x1F504; مزامنة تلقائية</button>
+                                <button class="btn btn-secondary" onclick="cloudFetchSync()">&#x2B07; سحب البيانات</button>
+                            </div>
+                            <p style="font-size:11px;color:var(--text-muted);margin-top:8px;" id="lastCloudSyncInfo">آخر مزامنة: -</p>
+                        </div>
+                    </div>
                     <div class="card full-width" id="insuranceClaimsCard" style="display:none;">
                         <div class="card-header"><h3>مطالبات التأمين</h3></div>
                         <div class="card-body">
@@ -1451,7 +1469,8 @@
             <div class="print-buttons">
                 <button class="btn btn-primary btn-block print-btn" onclick="window.print()">&#x1F5A8; طباعة</button>
                 <button class="btn btn-info btn-block" onclick="printA4(currentInvoice)">&#x1F4C4; طباعة A4</button>
-                <button class="btn btn-secondary btn-block" onclick="printThermal(currentInvoice)">&#x1F9FE; طباعة حرارية</button>
+                <button class="btn btn-secondary btn-block" onclick="printThermal(currentInvoice)">&#x1F9FE; طباعة حرارية (نافذة)</button>
+                <button class="btn btn-success btn-block" onclick="printThermalDirect(currentInvoice)">&#x1F5B1;&#xFE0F; طباعة حرارية مباشر</button>
             </div>
         </div>
     </div>
@@ -2227,5 +2246,31 @@
     <i class="fab fa-whatsapp"></i>
     <span class="wa-tooltip" data-i18n="wa.tooltip">احجز نسختك الآن!</span>
   </a>
+
+  <!-- ===== AI SUPPORT CHATBOT ===== -->
+  <div class="support-float" id="supportFloat" onclick="toggleSupportChat()">
+    <i class="fas fa-headset"></i>
+  </div>
+  <div class="support-chat" id="supportChat" style="display:none;">
+    <div class="support-chat-header">
+      <span>🤖 الدعم الفني الذكي</span>
+      <button onclick="toggleSupportChat()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;">&times;</button>
+    </div>
+    <div class="support-chat-messages" id="supportMessages">
+      <div class="support-msg support-msg-bot">
+        👋 مرحباً! أنا مساعد ValoPOS الذكي. اسألني عن أي ميزة أو مشكلة في النظام.
+      </div>
+    </div>
+    <div class="support-chat-input">
+      <input type="text" id="supportInput" placeholder="اكتب سؤالك هنا..." onkeydown="if(event.key==='Enter') sendSupportMessage()">
+      <button onclick="sendSupportMessage()"><i class="fas fa-paper-plane"></i></button>
+    </div>
+    <div class="support-chat-footer">
+      <span onclick="showSupportCategories()" style="cursor:pointer;font-size:11px;">📋 التصنيفات</span>
+      <span onclick="clearSupportChat()" style="cursor:pointer;font-size:11px;">🗑️ مسح</span>
+    </div>
+  </div>
+
+  <script src="js/support.js"></script>
 </body>
 </html>

@@ -1760,6 +1760,40 @@ document.getElementById('newSaleBtn').addEventListener('click', function() {
     showToast('فاتورة جديدة', 'info');
 });
 
+// ===== EGYPTIAN TAX QR CODE (TLV base64) =====
+function generateTaxQR(containerId, invoice) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var sellerName = appData.settings.pharmacyName || 'ValoPOS';
+    var taxNumber = appData.settings.taxNumber || '';
+    var dateStr = new Date(invoice.date).toISOString().replace(/\.\d{3}Z$/, '+02:00').replace('Z', '+02:00');
+    var total = invoice.net.toFixed(2);
+    var taxRate = parseFloat(appData.settings.taxRate) || 0;
+    var vatTotal = invoice.tax !== undefined ? invoice.tax.toFixed(2) : (invoice.subtotal * taxRate / 100).toFixed(2);
+    function toTLV(tag, value) {
+        var utf8 = unescape(encodeURIComponent(value));
+        var len = utf8.length;
+        var tagHex = String.fromCharCode(tag);
+        var lenHex = String.fromCharCode(len);
+        return tagHex + lenHex + utf8;
+    }
+    var tlv = toTLV(1, sellerName) + toTLV(2, taxNumber) + toTLV(3, dateStr) + toTLV(4, total) + toTLV(5, vatTotal);
+    var base64 = btoa(tlv);
+    container.innerHTML = '';
+    try {
+        new QRCode(container, {
+            text: base64,
+            width: 90,
+            height: 90,
+            colorDark: '#000000',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+        });
+    } catch(e) {
+        container.innerHTML = '<div style="padding:10px;color:red;font-size:11px;">QR Error</div>';
+    }
+}
+
 // ===== RECEIPT =====
 function barcodeHTML(code) {
     if (!code) return '';
@@ -1792,17 +1826,14 @@ function showReceipt(invoice) {
     let footer = appData.settings.receiptFooter || '\u0634\u0643\u0631\u0627\u064B \u0644\u062A\u0639\u0627\u0645\u0644\u0643\u0645 \u0645\u0639\u0646\u0627';
     let taxRate = parseFloat(appData.settings.taxRate) || 0;
     content.innerHTML = '\n        <div class="receipt">\n            <h3>' + escapeHtml(appData.settings.pharmacyName || 'ValoPOS') + '</h3>\n            <p>' + escapeHtml(appData.settings.address || '') + '</p>\n            <p>' + escapeHtml(appData.settings.phone || '') + '</p>\n            ' + firstBarcode + '\n            <div class="receipt-line"></div>\n            <p>\u0641\u0627\u062A\u0648\u0631\u0629 #' + invoice.id + '</p>\n            <p>' + formatDate(invoice.date) + '</p>\n            <p>' + (invoice.paymentMethod === 'cash' ? '\uD83D\uDCB0 \u0646\u0642\u062F\u0627\u064B' : invoice.paymentMethod === 'vodafone' ? '\uD83D\uDCF1 \u0641\u0648\u062F\u0627\u0641\u0648\u0646 \u0643\u0627\u0634' : invoice.paymentMethod === 'instapay' ? '\uD83D\uDCB3 \u0625\u0646\u0633\u062A\u0627 \u0628\u0627\u064A' : invoice.paymentMethod === 'card' ? '\uD83D\uDCB3 \u0628\u0637\u0627\u0642\u0629 \u0627\u0626\u062A\u0645\u0627\u0646' : invoice.paymentMethod === 'split' ? '\uD83D\uDD00 \u0645\u0642\u0633\u0645 (\u0646\u0642\u062F\u064A + \u0643\u0627\u0634)' : '\uD83D\uDCB0 \u0646\u0642\u062F\u0627\u064B') + '</p>\n            ' + (customerName ? '<p class="receipt-customer">\u0627\u0644\u0639\u0645\u064A\u0644: ' + escapeHtml(customerName) + '</p>' : '') + '\n            ' + (invoice.prescription && invoice.prescription.doctor ? '<div class="receipt-line"></div><p style="font-weight:700;margin:4px 0;font-size:13px;">\uD83D\uDCCB \u0631\u0648\u0634\u062A\u0629 \u0637\u0628\u064A\u0629</p><p>\u0627\u0644\u0637\u0628\u064A\u0628: ' + escapeHtml(invoice.prescription.doctor) + '</p>' + (invoice.prescription.diagnosis ? '<p>\u0627\u0644\u062A\u0634\u062E\u064A\u0635: ' + escapeHtml(invoice.prescription.diagnosis) + '</p>' : '') + (invoice.prescription.refills ? '<p>\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0635\u0631\u0641: ' + invoice.prescription.refills + '</p>' : '') + (invoice.prescription.date ? '<p>\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ' + invoice.prescription.date + '</p>' : '') : '') + '\n            <div class="receipt-line"></div>\n            ' + itemsHtml + '\n            <div class="receipt-line"></div>\n            <div class="receipt-row"><span>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</span><span>' + formatPrice(invoice.subtotal) + ' ' + cur + '</span></div>\n            <div class="receipt-row"><span>\u0627\u0644\u062E\u0635\u0645</span><span>' + formatPrice(invoice.discount) + ' ' + cur + '</span></div>\n            ' + (taxRate > 0 ? '<div class="receipt-row"><span>\u0627\u0644\u0636\u0631\u064A\u0628\u0629 (' + taxRate + '%)</span><span>' + formatPrice(invoice.tax || 0) + ' ' + cur + '</span></div>' : '') + '\n            <div class="receipt-row receipt-total"><span>\u0627\u0644\u0635\u0627\u0641\u064A</span><span>' + formatPrice(invoice.net) + ' ' + cur + '</span></div>\n            <div class="receipt-row"><span>\u0627\u0644\u0645\u062F\u0641\u0648\u0639</span><span>' + formatPrice(invoice.paid) + ' ' + cur + '</span></div>\n            <div class="receipt-row"><span>\u0627\u0644\u0628\u0627\u0642\u064A</span><span>' + formatPrice(invoice.change) + ' ' + cur + '</span></div>\n            <div class="receipt-line"></div>\n            <p>' + escapeHtml(footer) + '</p>\n        </div>\n    ';
-    var taxNumber = appData.settings.taxNumber || '';
-    var qrData = escapeHtml(taxNumber) + '|' + formatDateShort(invoice.date) + '|' + formatPrice(invoice.net);
-    var qrUrl = 'https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=' + encodeURIComponent(qrData) + '&choe=UTF-8';
     var qrContainer = document.getElementById('receiptQr');
     if (!qrContainer) {
         qrContainer = document.createElement('div');
         qrContainer.id = 'receiptQr';
-        qrContainer.style.cssText = 'text-align:center;margin:8px 0;';
+        qrContainer.className = 'receipt-qr';
         document.querySelector('.receipt')?.appendChild(qrContainer);
     }
-    qrContainer.innerHTML = '<img src="' + qrUrl + '" alt="QR" style="width:120px;height:120px;margin:0 auto;">';
+    generateTaxQR('receiptQr', invoice);
     document.getElementById('receiptModal').style.display = 'block';
 }
 
@@ -1820,9 +1851,30 @@ function printA4(invoice) {
     let taxRate = parseFloat(appData.settings.taxRate) || 0;
     let w = window.open('', '_blank', 'width=800,height=600');
     w.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>\u0641\u0627\u062A\u0648\u0631\u0629 A4 - ' + invoice.id + '</title><style>@page{size:A4;margin:15mm}body{font-family:"Segoe UI",sans-serif;color:#222;padding:20px}h2{text-align:center;margin-bottom:5px}.pharmacy-info{text-align:center;margin-bottom:15px;color:#555;font-size:14px}.invoice-info{display:flex;justify-content:space-between;margin-bottom:15px;font-size:13px}table{width:100%;border-collapse:collapse;margin-bottom:15px}th{background:#2e1065;color:#fff;padding:10px 12px;font-size:13px;text-align:center}td{font-size:13px}tr:nth-child(even){background:#f9f9f9}.totals{width:300px;margin-right:auto}.totals div{display:flex;justify-content:space-between;padding:6px 10px;font-size:14px;border-bottom:1px solid #ddd}.totals .net{font-weight:700;font-size:16px;border-top:2px solid #2e1065;padding-top:8px;margin-top:4px}.prescription-info{background:#f0f4ff;padding:12px;border-radius:8px;margin:15px 0;border-right:4px solid #2e1065;font-size:13px}.footer{text-align:center;margin-top:30px;font-size:13px;color:#888;border-top:2px solid #eee;padding-top:15px}@media print{body{padding:0}.no-print{display:none!important}}</style></head><body><h2>' + escapeHtml(appData.settings.pharmacyName || 'ValoPOS') + '</h2><div class="pharmacy-info">' + (appData.settings.address ? escapeHtml(appData.settings.address) + '<br>' : '') + (appData.settings.phone ? escapeHtml(appData.settings.phone) + '<br>' : '') + '</div><div class="invoice-info"><div><strong>\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629:</strong> #' + invoice.id + '</div><div><strong>\u0627\u0644\u062A\u0627\u0631\u064A\u062E:</strong> ' + formatDate(invoice.date) + '</div><div><strong>\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062F\u0641\u0639:</strong> ' + (invoice.paymentMethod === 'cash' ? '\uD83D\uDCB0 \u0646\u0642\u062F\u0627\u064B' : invoice.paymentMethod === 'vodafone' ? '\uD83D\uDCF1 \u0641\u0648\u062F\u0627\u0641\u0648\u0646 \u0643\u0627\u0634' : invoice.paymentMethod === 'instapay' ? '\uD83D\uDCB3 \u0625\u0646\u0633\u062A\u0627 \u0628\u0627\u064A' : invoice.paymentMethod === 'card' ? '\uD83D\uDCB3 \u0628\u0637\u0627\u0642\u0629' : invoice.paymentMethod === 'split' ? '\uD83D\uDD00 \u0645\u0642\u0633\u0645' : '\uD83D\uDCB0 \u0646\u0642\u062F\u0627\u064B') + '</div></div>' + (customerName ? '<div style="margin-bottom:12px;font-size:13px;"><strong>\u0627\u0644\u0639\u0645\u064A\u0644:</strong> ' + escapeHtml(customerName) + '</div>' : '') + (invoice.prescription && invoice.prescription.doctor ? '<div class="prescription-info"><strong>\u0631\u0648\u0634\u062A\u0629 \u0637\u0628\u064A\u0629</strong><br><strong>\u0627\u0644\u0637\u0628\u064A\u0628:</strong> ' + escapeHtml(invoice.prescription.doctor) + (invoice.prescription.diagnosis ? '<br><strong>\u0627\u0644\u062A\u0634\u062E\u064A\u0635:</strong> ' + escapeHtml(invoice.prescription.diagnosis) : '') + (invoice.prescription.refills ? '<br><strong>\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0635\u0631\u0641:</strong> ' + invoice.prescription.refills : '') + (invoice.prescription.date ? '<br><strong>\u0627\u0644\u062A\u0627\u0631\u064A\u062E:</strong> ' + invoice.prescription.date : '') + '</div>' : '') + '<table><thead><tr><th>\u0627\u0633\u0645 \u0627\u0644\u062F\u0648\u0627\u0621</th><th>\u0627\u0644\u0643\u0645\u064A\u0629</th><th>\u0627\u0644\u0633\u0639\u0631</th><th>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</th></tr></thead><tbody>' + itemsHtml + '</tbody></table><div class="totals"><div><span>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</span><span>' + formatPrice(invoice.subtotal) + ' ' + cur + '</span></div><div><span>\u0627\u0644\u062E\u0635\u0645</span><span>' + formatPrice(invoice.discount) + ' ' + cur + '</span></div>' + (taxRate > 0 ? '<div><span>\u0627\u0644\u0636\u0631\u064A\u0628\u0629 (' + taxRate + '%)</span><span>' + formatPrice(invoice.tax) + ' ' + cur + '</span></div>' : '') + '<div class="net"><span>\u0627\u0644\u0635\u0627\u0641\u064A</span><span>' + formatPrice(invoice.net) + ' ' + cur + '</span></div><div><span>\u0627\u0644\u0645\u062F\u0641\u0648\u0639</span><span>' + formatPrice(invoice.paid) + ' ' + cur + '</span></div><div><span>\u0627\u0644\u0628\u0627\u0642\u064A</span><span>' + formatPrice(invoice.change) + ' ' + cur + '</span></div></div><div class="footer">' + escapeHtml(footer) + '</div><div class="no-print" style="text-align:center;margin-top:20px;"><button onclick="window.print()" style="padding:10px 30px;background:#2e1065;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer;">\u0637\u0628\u0627\u0639\u0629</button></div></body></html>');
-    var taxNoA4 = appData.settings.taxNumber || '';
-    var qrA4 = 'https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl=' + encodeURIComponent(escapeHtml(taxNoA4) + '|' + formatDateShort(invoice.date) + '|' + formatPrice(invoice.net)) + '&choe=UTF-8';
-    w.document.body.innerHTML += '<div class="qr-wrap"><img src="' + qrA4 + '" style="width:120px;height:120px;"></div>';
+    var qrContainerA4 = w.document.createElement('div');
+    qrContainerA4.style.cssText = 'text-align:center;margin:10px 0;';
+    w.document.body.appendChild(qrContainerA4);
+    var sellerName = appData.settings.pharmacyName || 'ValoPOS';
+    var taxNumber = appData.settings.taxNumber || '';
+    var dateStr = new Date(invoice.date).toISOString().replace(/\.\d{3}Z$/, '+02:00').replace('Z', '+02:00');
+    var total = invoice.net.toFixed(2);
+    var vatTotal = invoice.tax !== undefined ? invoice.tax.toFixed(2) : (invoice.subtotal * taxRate / 100).toFixed(2);
+    function toTLV(tag, value) {
+        var utf8 = unescape(encodeURIComponent(value));
+        var len = utf8.length;
+        return String.fromCharCode(tag) + String.fromCharCode(len) + utf8;
+    }
+    var tlv = toTLV(1, sellerName) + toTLV(2, taxNumber) + toTLV(3, dateStr) + toTLV(4, total) + toTLV(5, vatTotal);
+    var base64 = btoa(tlv);
+    var img = w.document.createElement('img');
+    img.alt = 'QR';
+    img.style.cssText = 'width:120px;height:120px;display:inline-block;';
+    qrContainerA4.appendChild(img);
+    try {
+        QRCode.toDataURL(base64, { width: 120, height: 120, correctLevel: QRCode.CorrectLevel.M }, function(err, url) {
+            if (!err && url) { img.src = url; }
+        });
+    } catch(e) {}
     w.document.close();
 }
 
@@ -1840,10 +1892,114 @@ function printThermal(invoice) {
     let taxRate = parseFloat(appData.settings.taxRate) || 0;
     let w = window.open('', '_blank', 'width=380,height=600');
     w.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>\u0641\u0627\u062A\u0648\u0631\u0629 \u062D\u0631\u0627\u0631\u064A\u0629 - ' + invoice.id + '</title><style>@page{width:80mm;margin:0;padding:0}body{width:80mm;margin:0 auto;padding:10px 5px;font-family:"Courier New",monospace;font-size:12px;line-height:1.6;color:#000}h3{text-align:center;font-size:16px;margin:0 0 4px}.center{text-align:center;font-size:11px;margin:2px 0}.line{border-top:1px dashed #000;margin:8px 0}.row{display:flex;justify-content:space-between;font-size:12px;padding:2px 0}.total{font-weight:700;font-size:14px;padding-top:4px;border-top:1.5px solid #000}.footer{text-align:center;font-size:11px;margin-top:10px;padding-top:8px;border-top:1px dashed #000}.prescription-info{font-size:11px;padding:6px;border:1px dashed #000;margin:6px 0}@media print{body{width:80mm;margin:0;padding:5px}.no-print{display:none!important}}</style></head><body><h3>' + escapeHtml(appData.settings.pharmacyName || 'ValoPOS') + '</h3><div class="center">' + escapeHtml(appData.settings.address || '') + '</div><div class="center">' + escapeHtml(appData.settings.phone || '') + '</div><div class="line"></div><div class="center"><strong>\u0641\u0627\u062A\u0648\u0631\u0629 #' + invoice.id + '</strong></div><div class="center">' + formatDate(invoice.date) + '</div><div class="center">' + (invoice.paymentMethod === 'cash' ? '\uD83D\uDCB0 \u0646\u0642\u062F\u0627\u064B' : invoice.paymentMethod === 'vodafone' ? '\uD83D\uDCF1 \u0641\u0648\u062F\u0627\u0641\u0648\u0646 \u0643\u0627\u0634' : invoice.paymentMethod === 'instapay' ? '\uD83D\uDCB3 \u0625\u0646\u0633\u062A\u0627 \u0628\u0627\u064A' : invoice.paymentMethod === 'card' ? '\uD83D\uDCB3 \u0628\u0637\u0627\u0642\u0629' : invoice.paymentMethod === 'split' ? '\uD83D\uDD00 \u0645\u0642\u0633\u0645' : '\uD83D\uDCB0 \u0646\u0642\u062F\u0627\u064B') + '</div>' + (customerName ? '<div class="center" style="font-weight:600;">\u0627\u0644\u0639\u0645\u064A\u0644: ' + escapeHtml(customerName) + '</div>' : '') + (invoice.prescription && invoice.prescription.doctor ? '<div class="prescription-info"><strong>\u0631\u0648\u0634\u062A\u0629</strong><br>\u0627\u0644\u0637\u0628\u064A\u0628: ' + escapeHtml(invoice.prescription.doctor) + (invoice.prescription.diagnosis ? '<br>\u0627\u0644\u062A\u0634\u062E\u064A\u0635: ' + escapeHtml(invoice.prescription.diagnosis) : '') + '</div>' : '') + '<div class="line"></div>' + itemsHtml + '<div class="line"></div><div class="row"><span>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</span><span>' + formatPrice(invoice.subtotal) + '</span></div><div class="row"><span>\u0627\u0644\u062E\u0635\u0645</span><span>' + formatPrice(invoice.discount) + '</span></div>' + (taxRate > 0 ? '<div class="row"><span>\u0627\u0644\u0636\u0631\u064A\u0628\u0629</span><span>' + formatPrice(invoice.tax) + '</span></div>' : '') + '<div class="row total"><span>\u0627\u0644\u0635\u0627\u0641\u064A</span><span>' + formatPrice(invoice.net) + '</span></div><div class="row"><span>\u0627\u0644\u0645\u062F\u0641\u0648\u0639</span><span>' + formatPrice(invoice.paid) + '</span></div><div class="row"><span>\u0627\u0644\u0628\u0627\u0642\u064A</span><span>' + formatPrice(invoice.change) + '</span></div><div class="footer">' + escapeHtml(footer) + '</div><div class="no-print" style="text-align:center;margin-top:10px;"><button onclick="window.print()" style="padding:8px 20px;background:#000;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;">\u0637\u0628\u0627\u0639\u0629</button></div></body></html>');
-    var taxNoTh = appData.settings.taxNumber || '';
-    var qrTh = 'https://chart.googleapis.com/chart?chs=120x120&cht=qr&chl=' + encodeURIComponent(escapeHtml(taxNoTh) + '|' + formatDateShort(invoice.date) + '|' + formatPrice(invoice.net)) + '&choe=UTF-8';
-    w.document.body.innerHTML += '<div style="text-align:center;margin:8px 0;"><img src="' + qrTh + '" style="width:100px;height:100px;"></div>';
+    var qrContainerTh = w.document.createElement('div');
+    qrContainerTh.style.cssText = 'text-align:center;margin:8px 0;';
+    w.document.body.appendChild(qrContainerTh);
+    var sellerName = appData.settings.pharmacyName || 'ValoPOS';
+    var taxNumber = appData.settings.taxNumber || '';
+    var dateStr = new Date(invoice.date).toISOString().replace(/\.\d{3}Z$/, '+02:00').replace('Z', '+02:00');
+    var total = invoice.net.toFixed(2);
+    var vatTotal = invoice.tax !== undefined ? invoice.tax.toFixed(2) : (invoice.subtotal * taxRate / 100).toFixed(2);
+    function toTLV(tag, value) {
+        var utf8 = unescape(encodeURIComponent(value));
+        var len = utf8.length;
+        return String.fromCharCode(tag) + String.fromCharCode(len) + utf8;
+    }
+    var tlv = toTLV(1, sellerName) + toTLV(2, taxNumber) + toTLV(3, dateStr) + toTLV(4, total) + toTLV(5, vatTotal);
+    var base64 = btoa(tlv);
+    var img = w.document.createElement('img');
+    img.alt = 'QR';
+    img.style.cssText = 'width:100px;height:100px;display:inline-block;';
+    qrContainerTh.appendChild(img);
+    try {
+        QRCode.toDataURL(base64, { width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M }, function(err, url) {
+            if (!err && url) { img.src = url; }
+        });
+    } catch(e) {}
     w.document.close();
+}
+
+function printThermalDirect(invoice) {
+    if (!invoice) return;
+    if (invoice.items.length === 0) { showToast('السلة فارغة', 'warning'); return; }
+    var customerName = '';
+    if (invoice.customerId) {
+        var c = appData.customers.find(function(cx) { return cx.id === invoice.customerId; });
+        if (c) customerName = c.name;
+    }
+    var itemsHtml = invoice.items.map(function(item) {
+        return '<div class="tr-row"><span>' + escapeHtml(item.name) + ' \u00D7' + item.qty + '</span><span>' + formatPrice(item.price * item.qty) + '</span></div>';
+    }).join('');
+    var footer = appData.settings.receiptFooter || '\u0634\u0643\u0631\u0627\u064B \u0644\u062A\u0639\u0627\u0645\u0644\u0643\u0645 \u0645\u0639\u0646\u0627';
+    var pharmacyName = escapeHtml(appData.settings.pharmacyName || 'ValoPOS');
+    var address = escapeHtml(appData.settings.address || '');
+    var phone = escapeHtml(appData.settings.phone || '');
+    var taxNumber = escapeHtml(appData.settings.taxNumber || '');
+    var dateStr = formatDate(invoice.date);
+    var subtotal = formatPrice(invoice.subtotal);
+    var discount = formatPrice(invoice.discount);
+    var tax = formatPrice(invoice.tax);
+    var net = formatPrice(invoice.net);
+    var paid = formatPrice(invoice.paid);
+    var change = formatPrice(invoice.change);
+    var paymentText = invoice.paymentMethod === 'cash' ? '\u0646\u0642\u062F\u0627\u064B' :
+        invoice.paymentMethod === 'vodafone' ? '\u0641\u0648\u062F\u0627\u0641\u0648\u0646 \u0643\u0627\u0634' :
+        invoice.paymentMethod === 'instapay' ? '\u0625\u0646\u0633\u062A\u0627 \u0628\u0627\u064A' :
+        invoice.paymentMethod === 'card' ? '\u0628\u0637\u0627\u0642\u0629' :
+        invoice.paymentMethod === 'split' ? '\u0645\u0642\u0633\u0645' : '\u0646\u0642\u062F\u0627\u064B';
+
+    var printWindow = window.open('', '_blank', 'width=380,height=600');
+    if (!printWindow) { showToast('الرجاء السماح بالنوافذ المنبثقة للطباعة', 'error'); return; }
+
+    printWindow.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>\u0641\u0627\u062A\u0648\u0631\u0629 \u062D\u0631\u0627\u0631\u064A\u0629 - ' + invoice.id + '</title>');
+    printWindow.document.write('<link rel="stylesheet" href="css/style.css">');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write('<div class="thermal-receipt">');
+    printWindow.document.write('<div class="tr-header">' + pharmacyName + '</div>');
+    if (address) printWindow.document.write('<div class="tr-sub">' + address + '</div>');
+    if (phone) printWindow.document.write('<div class="tr-sub">' + phone + '</div>');
+    printWindow.document.write('<div class="tr-divider"></div>');
+    printWindow.document.write('<div class="tr-sub"><strong>\u0641\u0627\u062A\u0648\u0631\u0629 #' + invoice.id + '</strong></div>');
+    printWindow.document.write('<div class="tr-sub">' + dateStr + '</div>');
+    printWindow.document.write('<div class="tr-sub">' + paymentText + '</div>');
+    if (customerName) printWindow.document.write('<div class="tr-sub">\u0627\u0644\u0639\u0645\u064A\u0644: ' + escapeHtml(customerName) + '</div>');
+    printWindow.document.write('<div class="tr-divider"></div>');
+    printWindow.document.write(itemsHtml);
+    printWindow.document.write('<div class="tr-divider"></div>');
+    printWindow.document.write('<div class="tr-row"><span>\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A</span><span>' + subtotal + '</span></div>');
+    if (parseFloat(invoice.discount) > 0) printWindow.document.write('<div class="tr-row"><span>\u0627\u0644\u062E\u0635\u0645</span><span>-' + discount + '</span></div>');
+    if (parseFloat(invoice.tax) > 0) printWindow.document.write('<div class="tr-row"><span>\u0627\u0644\u0636\u0631\u064A\u0628\u0629</span><span>' + tax + '</span></div>');
+    printWindow.document.write('<div class="tr-row tr-total"><span>\u0627\u0644\u0635\u0627\u0641\u064A</span><span>' + net + '</span></div>');
+    printWindow.document.write('<div class="tr-row"><span>\u0627\u0644\u0645\u062F\u0641\u0648\u0639</span><span>' + paid + '</span></div>');
+    if (parseFloat(invoice.change) > 0) printWindow.document.write('<div class="tr-row"><span>\u0627\u0644\u0628\u0627\u0642\u064A</span><span>' + change + '</span></div>');
+    if (taxNumber) printWindow.document.write('<div class="tr-sub">\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A: ' + taxNumber + '</div>');
+    printWindow.document.write('<div class="tr-divider"></div>');
+    printWindow.document.write('<div id="thermalQrContainer" class="receipt-qr"></div>');
+    printWindow.document.write('<div class="tr-footer">' + footer + '</div>');
+    printWindow.document.write('</div></body></html>');
+    printWindow.document.close();
+    // Generate QR in the new window
+    var qrDiv = printWindow.document.getElementById('thermalQrContainer');
+    if (qrDiv && typeof QRCode !== 'undefined') {
+        var sellerName = appData.settings.pharmacyName || 'ValoPOS';
+        var taxNo = appData.settings.taxNumber || '';
+        var dt = new Date(invoice.date).toISOString().replace(/\.\d{3}Z$/, '+02:00').replace('Z', '+02:00');
+        var tl = invoice.net.toFixed(2);
+        var tr = invoice.tax !== undefined ? invoice.tax.toFixed(2) : '0.00';
+        function toTLV(tag, value) { var utf8 = unescape(encodeURIComponent(value)); return String.fromCharCode(tag) + String.fromCharCode(utf8.length) + utf8; }
+        var tlv = toTLV(1, sellerName) + toTLV(2, taxNo) + toTLV(3, dt) + toTLV(4, tl) + toTLV(5, tr);
+        var b64 = btoa(tlv);
+        try {
+            new QRCode(qrDiv, { text: b64, width: 80, height: 80, correctLevel: QRCode.CorrectLevel.M });
+            printWindow.document.title = '\u0641\u0627\u062A\u0648\u0631\u0629 \u062D\u0631\u0627\u0631\u064A\u0629 - ' + invoice.id;
+        } catch(e) {}
+    }
+    setTimeout(function() {
+        if (printWindow) {
+            printWindow.focus();
+            printWindow.print();
+        }
+    }, 500);
 }
 
 window.addEventListener('afterprint', function() {
@@ -3045,6 +3201,7 @@ function loadSettings() {
     updateBackupDateDisplay();
     loadAgents();
     loadManufacturers();
+    initCloudSyncUI();
 }
 
 function saveSettings() {
@@ -3196,6 +3353,189 @@ function checkBackupReminder() {
         setTimeout(function() {
             showToast(getText('settings.backupReminder'), 'warning');
         }, 4000);
+    }
+}
+
+// ===== CLOUD SYNC =====
+function getCloudServer() {
+    var s = appData.settings.cloudServer || localStorage.getItem('valopos_cloud_server') || '';
+    if (!s) {
+        // Auto-detect: use current host or localhost:3000
+        var loc = window.location;
+        s = loc.protocol + '//' + loc.host;
+        if (s.indexOf('localhost') > -1 || s.indexOf('127.0.0.1') > -1) {
+            s = 'http://localhost:3000';
+        }
+    }
+    return s.replace(/\/+$/, '');
+}
+
+function cloudBackup(quiet) {
+    var server = getCloudServer();
+    var payload = {
+        pharmacyName: appData.settings.pharmacyName || 'ValoPOS',
+        data: {
+            appData: JSON.parse(JSON.stringify(appData)),
+            medStock: getAllStock()
+        }
+    };
+    return fetch(server + '/api/backup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    }).then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    }).then(function(result) {
+        localStorage.setItem('valopos_last_cloud_backup', result.id + '|' + result.date);
+        if (!quiet) showToast('✅ تم الرفع للسحابة بنجاح', 'success');
+        return result;
+    }).catch(function(err) {
+        if (!quiet) showToast('❌ فشل الرفع للسحابة: ' + err.message, 'error');
+        throw err;
+    });
+}
+
+function cloudListBackups() {
+    var server = getCloudServer();
+    return fetch(server + '/api/backup')
+        .then(function(r) { return r.json(); })
+        .then(function(result) { return result.backups || []; })
+        .catch(function() { return []; });
+}
+
+function cloudRestore(backupId) {
+    var server = getCloudServer();
+    return fetch(server + '/api/backup/' + backupId)
+        .then(function(r) { return r.json(); })
+        .then(function(backup) {
+            if (!backup.data || !backup.data.appData || !backup.data.medStock) {
+                throw new Error('بيانات غير صالحة');
+            }
+            appData = backup.data.appData;
+            medStock = backup.data.medStock;
+            saveData();
+            saveStock();
+            showToast('✅ تم استعادة البيانات من السحابة', 'success');
+            setTimeout(function() { location.reload(); }, 2000);
+        })
+        .catch(function(err) {
+            showToast('❌ فشل الاستعادة: ' + err.message, 'error');
+            throw err;
+        });
+}
+
+function cloudSync() {
+    var server = getCloudServer();
+    var payload = {
+        pharmacyName: appData.settings.pharmacyName || 'ValoPOS',
+        data: {
+            appData: JSON.parse(JSON.stringify(appData)),
+            medStock: getAllStock()
+        }
+    };
+    return fetch(server + '/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    }).then(function(r) { return r.json(); })
+    .then(function(result) {
+        localStorage.setItem('valopos_last_sync', result.date);
+        showToast('✅ تمت المزامنة مع السحابة', 'success');
+    }).catch(function(err) {
+        showToast('❌ فشلت المزامنة: ' + err.message, 'error');
+    });
+}
+
+function cloudFetchSync() {
+    var server = getCloudServer();
+    return fetch(server + '/api/sync')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data && data.data && data.data.appData) {
+                appData = data.data.appData;
+                medStock = data.data.medStock;
+                saveData();
+                saveStock();
+                showToast('✅ تم سحب البيانات من السحابة', 'success');
+                setTimeout(function() { location.reload(); }, 1500);
+            }
+        })
+        .catch(function(err) {
+            showToast('❌ فشل سحب البيانات: ' + err.message, 'error');
+        });
+}
+
+function showCustomModal(content) {
+    var overlay = document.createElement('div');
+    overlay.className = 'modal';
+    overlay.style.cssText = 'display:flex;justify-content:center;align-items:center;z-index:9999;';
+    overlay.onclick = function(e) { if (e.target === overlay) { document.body.removeChild(overlay); } };
+    var box = document.createElement('div');
+    box.className = 'modal-content';
+    box.style.cssText = 'max-width:480px;width:90%;max-height:80vh;overflow-y:auto;position:relative;padding:0;';
+    var close = document.createElement('span');
+    close.className = 'modal-close';
+    close.innerHTML = '&times;';
+    close.onclick = function() { document.body.removeChild(overlay); };
+    box.appendChild(close);
+    var body = document.createElement('div');
+    body.innerHTML = content;
+    box.appendChild(body);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+}
+
+function showCloudRestoreDialog() {
+    cloudListBackups().then(function(backups) {
+        if (backups.length === 0) {
+            showToast('❌ لا توجد نسخ احتياطية على السحابة', 'warning');
+            return;
+        }
+        var html = '<div style="padding:16px;"><h3 style="margin-bottom:12px;">📥 استعادة من السحابة</h3>';
+        html += '<p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">اختر النسخة الاحتياطية:</p>';
+        html += '<div style="max-height:300px;overflow-y:auto;">';
+        backups.forEach(function(b) {
+            var d = new Date(b.date);
+            html += '<div onclick="cloudRestore(\'' + b.id + '\')" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:0.2s;" onmouseover="this.style.background=\'var(--bg-hover)\'" onmouseout="this.style.background=\'\'">';
+            html += '<div style="font-weight:600;">' + escapeHtml(b.pharmacyName || 'ValoPOS') + '</div>';
+            html += '<div style="font-size:12px;color:var(--text-muted);">' + d.toLocaleString() + '</div>';
+            html += '</div>';
+        });
+        html += '</div></div>';
+        showCustomModal(html);
+    });
+}
+
+function saveCloudServerUrl() {
+    var el = document.getElementById('cloudServerUrl');
+    if (!el) return;
+    var url = el.value.trim();
+    if (url) {
+        localStorage.setItem('valopos_cloud_server', url.replace(/\/+$/, ''));
+    } else {
+        localStorage.removeItem('valopos_cloud_server');
+    }
+}
+
+function initCloudSyncUI() {
+    var el = document.getElementById('cloudServerUrl');
+    if (el) {
+        var saved = getCloudServer();
+        el.value = saved;
+    }
+    updateCloudSyncInfo();
+}
+
+function updateCloudSyncInfo() {
+    var el = document.getElementById('lastCloudSyncInfo');
+    if (!el) return;
+    var last = localStorage.getItem('valopos_last_sync');
+    if (last) {
+        var d = new Date(last);
+        el.textContent = 'آخر مزامنة: ' + d.toLocaleString();
+    } else {
+        el.textContent = 'آخر مزامنة: لم تتم بعد';
     }
 }
 
