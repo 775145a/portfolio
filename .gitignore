@@ -2,6 +2,7 @@
 .netlify
 
 # Node modules
+node_modules/
 server/node_modules/
 data/
 *.db
