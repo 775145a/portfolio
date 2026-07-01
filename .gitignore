@@ -23,3 +23,10 @@ start_server.bat
 # Raw drug database source data (not needed at runtime)
 egyptian-drugs.csv
 egyptian-drugs.json
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
