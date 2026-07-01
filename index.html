@@ -182,6 +182,10 @@
                     <span class="nav-icon">&#x1F3AF;</span>
                     <span data-i18n="nav.targets">أهداف المبيعات</span>
                 </a>
+                <a href="#" class="nav-item" data-page="support">
+                    <span class="nav-icon">&#x1F3E0;</span>
+                    <span>🛟 الدعم الفني</span>
+                </a>
                 <a href="#" class="nav-item" data-page="settings">
                     <span class="nav-icon">&#x2699;&#xFE0F;</span>
                     <span data-i18n="nav.settings">الإعدادات</span>
@@ -1210,6 +1214,49 @@
         </div>
     </section>
 
+    <!-- ===== صفحة الدعم الفني ===== -->
+    <section class="page" id="page-support">
+        <div class="page-header">
+            <h1>🛟 الدعم الفني</h1>
+            <p>المساعدة والدعم الفني لنظام ValoPOS</p>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="card full-width" style="grid-column:1/-1;">
+                <div class="card-header"><h3>🤖 المساعد الذكي</h3></div>
+                <div class="card-body" style="max-height:400px;overflow-y:auto;display:flex;flex-direction:column;">
+                    <div id="supportPageMessages" class="support-chat-messages" style="flex:1;max-height:300px;border:1px solid var(--border-light);border-radius:8px;margin-bottom:10px;">
+                        <div class="support-msg support-msg-bot">👋 مرحباً! أنا مساعد ValoPOS الذكي. اسألني عن أي ميزة أو مشكلة في النظام.</div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <input type="text" id="supportPageInput" class="form-input" placeholder="اكتب سؤالك هنا..." style="flex:1;" onkeydown="if(event.key==='Enter') sendSupportPageMessage()">
+                        <button class="btn btn-primary" onclick="sendSupportPageMessage()"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                    <div style="display:flex;gap:12px;margin-top:8px;font-size:12px;color:var(--text-muted);">
+                        <span onclick="showSupportPageCategories()" style="cursor:pointer;">📋 التصنيفات</span>
+                        <span onclick="clearSupportPageChat()" style="cursor:pointer;">🗑️ مسح</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h3>📋 تصنيفات المساعدة</h3></div>
+                <div class="card-body" id="supportCategoriesList"></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h3>⌨️ اختصارات سريعة</h3></div>
+                <div class="card-body" style="font-size:13px;">
+                    <div><kbd>F1</kbd> هذه الصفحة</div>
+                    <div><kbd>F2</kbd> نقطة البيع</div>
+                    <div><kbd>F3</kbd> المخزون</div>
+                    <div><kbd>F4</kbd> العملاء</div>
+                    <div><kbd>F5</kbd> التقارير</div>
+                    <div><kbd>F10</kbd> الإعدادات</div>
+                    <div><kbd>F11</kbd> الدعم الفني</div>
+                    <div><kbd>Esc</kbd> إغلاق</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     </div>
 
     <!-- ===== المودالات (Modal) ===== -->
@@ -2175,6 +2222,7 @@
                 <div><kbd>F8</kbd> فاتورة جديدة</div>
                 <div><kbd>F9</kbd> تركيز على الدفع</div>
                 <div><kbd>F10</kbd> الإعدادات</div>
+                <div><kbd>F11</kbd> الدعم الفني</div>
                 <div><kbd>Esc</kbd> إغلاق جميع النوافذ</div>
                 <div><kbd>Ctrl+F</kbd> بحث في المخزون</div>
             </div>

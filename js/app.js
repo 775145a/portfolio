@@ -1205,6 +1205,7 @@ navItems.forEach(function(item) {
         if (pageId === 'coupons') { renderCoupons(); }
         if (pageId === 'compounds') { renderCompounds(); }
         if (pageId === 'targets') { renderSalesTargets(); }
+        if (pageId === 'support') { renderSupportPage(); }
         if (pageId === 'settings') { loadSettings(); if (typeof checkTodayClosing === 'function') checkTodayClosing(); }
         if (window.innerWidth < 768) {
             document.getElementById('sidebar').classList.remove('open');
@@ -4343,6 +4344,7 @@ document.addEventListener('keydown', function(e) {
         case 'F8': e.preventDefault(); newSale(); break;
         case 'F9': e.preventDefault(); focusPaidInput(); break;
         case 'F10': e.preventDefault(); navigateTo('settings'); break;
+        case 'F11': e.preventDefault(); navigateTo('support'); break;
         case 'Escape': closeAllModals(); break;
     }
 });
@@ -6046,3 +6048,83 @@ loadTouchMode();
 
 // Reorder alert on load (after init)
 setTimeout(checkReorderAlerts, 2000);
+
+// ===== SUPPORT PAGE =====
+function renderSupportPage() {
+    var list = document.getElementById('supportCategoriesList');
+    if (!list) return;
+    var html = '';
+    for (var i = 0; i < supportCategories.length; i++) {
+        var c = supportCategories[i];
+        html += '<div onclick="sendSupportPageQuery(\'' + c.key.replace(/'/g, "\\'") + '\')" style="padding:8px 10px;border:1px solid var(--border-light);border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:13px;transition:0.2s;" onmouseover="this.style.background=\'var(--bg-hover)\'" onmouseout="this.style.background=\'\'">' + c.name + '</div>';
+    }
+    list.innerHTML = html;
+}
+
+function sendSupportPageQuery(key) {
+    var entry = supportKB[key];
+    if (!entry) return;
+    supportContext.push({ role: 'user', content: key });
+    setTimeout(function() {
+        var response = entry.answer;
+        var msgs = document.getElementById('supportPageMessages');
+        if (!msgs) return;
+        var div = document.createElement('div');
+        div.className = 'support-msg support-msg-user';
+        div.textContent = key;
+        msgs.appendChild(div);
+        var div2 = document.createElement('div');
+        div2.className = 'support-msg support-msg-bot';
+        div2.innerHTML = response.replace(/\n/g, '<br>');
+        msgs.appendChild(div2);
+        msgs.scrollTop = msgs.scrollHeight;
+        supportContext.push({ role: 'bot', content: response });
+    }, 200);
+}
+
+function sendSupportPageMessage() {
+    var input = document.getElementById('supportPageInput');
+    if (!input) return;
+    var text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    var msgs = document.getElementById('supportPageMessages');
+    if (!msgs) return;
+    var div = document.createElement('div');
+    div.className = 'support-msg support-msg-user';
+    div.textContent = text;
+    msgs.appendChild(div);
+    supportContext.push({ role: 'user', content: text });
+    setTimeout(function() {
+        var response = getSupportResponse(text);
+        var div2 = document.createElement('div');
+        div2.className = 'support-msg support-msg-bot';
+        div2.innerHTML = response.replace(/\n/g, '<br>');
+        msgs.appendChild(div2);
+        msgs.scrollTop = msgs.scrollHeight;
+        supportContext.push({ role: 'bot', content: response });
+    }, 300 + Math.random() * 400);
+}
+
+function showSupportPageCategories() {
+    var msgs = document.getElementById('supportPageMessages');
+    if (!msgs) return;
+    var html = '📋 تصنيفات المساعدة:<br><br>';
+    for (var i = 0; i < supportCategories.length; i++) {
+        html += '• ' + supportCategories[i].name + '<br>';
+    }
+    html += '<br>اكتب اسم التصنيف للمساعدة.';
+    var div = document.createElement('div');
+    div.className = 'support-msg support-msg-bot';
+    div.innerHTML = html;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+function clearSupportPageChat() {
+    var msgs = document.getElementById('supportPageMessages');
+    if (msgs) {
+        msgs.innerHTML = '<div class="support-msg support-msg-bot">👋 مرحباً! أنا مساعد ValoPOS الذكي. اسألني عن أي ميزة أو مشكلة في النظام.</div>';
+    }
+    supportContext = [];
+}
