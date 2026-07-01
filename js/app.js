@@ -3046,8 +3046,6 @@ function loadSettings() {
     loadAgents();
     loadManufacturers();
 }
-    updateBackupDateDisplay();
-}
 
 function saveSettings() {
     appData.settings.pharmacyName = document.getElementById('pharmacyName').value;
