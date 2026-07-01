@@ -21,6 +21,70 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link rel="stylesheet" href="css/style.css?v=20260613">
     <style>
+      :root {
+        --primary: #2563eb;
+        --primary-dark: #1d4ed8;
+        --primary-light: #60a5fa;
+        --primary-lighter: #93c5fd;
+        --primary-glow: rgba(37, 99, 235, 0.25);
+        --success: #10b981;
+        --success-dark: #059669;
+        --success-glow: rgba(16, 185, 129, 0.25);
+        --warning: #f59e0b;
+        --accent: #f59e0b;
+        --accent-dark: #b45309;
+        --danger: #ef4444;
+        --danger-dark: #dc2626;
+        --danger-glow: rgba(239, 68, 68, 0.25);
+        --info: #06b6d4;
+        --purple: #a855f7;
+        --bg: #f0f2f8;
+        --bg-alt: #e4e7f0;
+        --bg-card: #ffffff;
+        --card-hover: #f8f9ff;
+        --text: #0f172a;
+        --text-light: #475569;
+        --text-muted: #94a3b8;
+        --border: #cbd5e1;
+        --border-light: #e2e8f0;
+        --shadow: 0 1px 3px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.06);
+        --shadow-md: 0 4px 6px rgba(15,23,42,0.07), 0 2px 4px rgba(15,23,42,0.06);
+        --shadow-lg: 0 10px 25px rgba(15,23,42,0.1), 0 4px 10px rgba(15,23,42,0.06);
+        --radius: 12px;
+        --radius-sm: 8px;
+        --radius-lg: 16px;
+        --transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+        --gradient-primary: linear-gradient(135deg, #2563eb, #60a5fa);
+        --gradient-success: linear-gradient(135deg, #10b981, #059669);
+        --gradient-danger: linear-gradient(135deg, #ef4444, #dc2626);
+        --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      }
+      [data-theme="dark"] {
+        --primary: #3b82f6;
+        --primary-dark: #2563eb;
+        --primary-light: #60a5fa;
+        --primary-lighter: #93c5fd;
+        --primary-glow: rgba(59, 130, 246, 0.25);
+        --bg: #0f172a;
+        --bg-alt: #1e293b;
+        --bg-card: #1e293b;
+        --card-hover: #334155;
+        --text: #e2e8f0;
+        --text-light: #94a3b8;
+        --text-muted: #64748b;
+        --border: #334155;
+        --border-light: #1e293b;
+        --shadow: 0 1px 3px rgba(0,0,0,0.4);
+        --shadow-md: 0 4px 6px rgba(0,0,0,0.5);
+        --shadow-lg: 0 10px 25px rgba(0,0,0,0.6);
+      }
+      body {
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      .top-header {
+        backdrop-filter: blur(20px) saturate(1.2);
+        -webkit-backdrop-filter: blur(20px) saturate(1.2);
+      }
       .whatsapp-float{position:fixed;bottom:90px;right:24px;width:56px;height:56px;border-radius:50%;background:#25d366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.7rem;text-decoration:none;box-shadow:0 6px 24px rgba(37,211,102,0.4);z-index:998;transition:all .3s ease;animation:whatsappPulse 2s ease-in-out infinite}
       .whatsapp-float:hover{transform:scale(1.12);color:#fff;box-shadow:0 8px 32px rgba(37,211,102,0.55)}
       .whatsapp-float .wa-tooltip{position:absolute;right:66px;background:#075e54;color:#fff;padding:6px 14px;border-radius:8px;font-size:.78rem;white-space:nowrap;opacity:0;visibility:hidden;transition:.3s;font-weight:500;pointer-events:none}
@@ -391,6 +455,7 @@
                         <button class="btn btn-info" id="addMedBtn"><span data-i18n="inv.addMed">+ دواء جديد</span></button>
                         <button class="btn btn-success" id="exportBtn">&#x1F4E4; <span data-i18n="inv.export">تصدير</span></button>
                         <button class="btn btn-info" onclick="exportInventoryCSV()">&#x1F4CA; <span data-i18n="inv.exportCSV">تصدير CSV</span></button>
+                        <button class="btn btn-warning" onclick="showBulkPriceModal()">&#x1F4B1; <span>تحديث الأسعار</span></button>
                     </div>
                 </div>
                 <div class="inventory-controls">
@@ -400,6 +465,9 @@
                     </div>
                     <select id="invCategory" class="form-select">
                         <option value="الكل" data-i18n="inv.allCategories">كل التصنيفات</option>
+                    </select>
+                    <select id="invManufacturer" class="form-select" style="max-width:180px;">
+                        <option value="الكل">كل الشركات</option>
                     </select>
                     <select id="invStatus" class="form-select">
                         <option value="الكل" data-i18n="common.all">كل الحالات</option>
@@ -902,10 +970,17 @@
                     <div class="card">
                         <div class="card-header"><h3 data-i18n="set.dataBackup">البيانات والنسخ الاحتياطي</h3></div>
                         <div class="card-body">
-                            <button class="btn btn-warning btn-block" onclick="resetData()">&#x1F5D1; <span data-i18n="set.clearData">مسح جميع البيانات</span></button>
-                            <button class="btn btn-success btn-block" onclick="downloadBackup()">&#x1F4BE; <span data-i18n="set.downloadBackup">تحميل نسخة احتياطية</span></button>
-                            <button class="btn btn-info btn-block" onclick="importBackup()">&#x1F4C2; <span data-i18n="set.importBackup">استيراد نسخة احتياطية</span></button>
-                            <button class="btn btn-secondary btn-block" onclick="exportInventoryCSV()">&#x1F4CA; <span data-i18n="inv.exportCSV">تصدير المخزون CSV</span></button>
+                            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;"><span data-i18n="set.lastBackup">آخر نسخة احتياطية:</span> <span id="lastBackupDate">-</span></p>
+                            <button class="btn btn-success btn-block" onclick="exportAllData()">&#x1F4BE; <span data-i18n="set.exportAllData">تصدير كل البيانات</span></button>
+                            <div style="margin-top:10px;padding:10px;background:#fff0f0;border:1px solid #dc3545;border-radius:8px;font-size:12px;color:#dc3545;">
+                                <strong><span data-i18n="set.importWarning">&#x26A0;&#xFE0F; تحذير: استيراد البيانات سيحل محل جميع البيانات الحالية!</span></strong>
+                            </div>
+                            <div style="display:flex;gap:8px;margin-top:10px;">
+                                <input type="file" id="importFileInput" accept=".json" style="flex:1;padding:4px;border:1px solid #ccc;border-radius:6px;font-size:13px;" onchange="importAllData(this.files[0]);this.value='';">
+                                <button class="btn btn-info" onclick="document.getElementById('importFileInput').click()">&#x1F4C2; <span data-i18n="set.importData">استيراد بيانات</span></button>
+                            </div>
+                            <button class="btn btn-secondary btn-block" style="margin-top:10px;" onclick="exportInventoryCSV()">&#x1F4CA; <span data-i18n="inv.exportCSV">تصدير المخزون CSV</span></button>
+                            <button class="btn btn-warning btn-block" style="margin-top:10px;" onclick="resetData()">&#x1F5D1; <span data-i18n="set.clearData">مسح جميع البيانات</span></button>
                         </div>
                     </div>
                     <div class="card full-width" id="insuranceClaimsCard" style="display:none;">
@@ -1953,6 +2028,49 @@
                 <input type="tel" id="onboardPhone" class="form-input" placeholder="رقم الهاتف">
             </div>
             <button class="btn btn-primary btn-block" onclick="completeOnboarding()">ابدأ الآن</button>
+        </div>
+    </div>
+
+    <!-- ===== مودال تحديث الأسعار ===== -->
+    <div class="modal" id="bulkPriceModal">
+        <div class="modal-content" style="max-width:500px;">
+            <span class="modal-close">&times;</span>
+            <h2>تحديث الأسعار</h2>
+            <div class="form-group">
+                <label>نطاق التحديث</label>
+                <select id="bpScope" class="form-select" onchange="toggleBpScope()">
+                    <option value="all">جميع الأدوية</option>
+                    <option value="category">حسب التصنيف</option>
+                    <option value="manufacturer">حسب الشركة المصنعة</option>
+                </select>
+            </div>
+            <div class="form-group" id="bpCategoryGroup" style="display:none;">
+                <label>التصنيف</label>
+                <select id="bpCategory" class="form-select"></select>
+            </div>
+            <div class="form-group" id="bpManufacturerGroup" style="display:none;">
+                <label>الشركة المصنعة</label>
+                <select id="bpManufacturer" class="form-select"></select>
+            </div>
+            <div class="form-group">
+                <label>نسبة التغيير (%)</label>
+                <input type="number" id="bpPercent" class="form-input" value="10" step="0.5" placeholder="0">
+                <small style="color:var(--text-muted);">قيمة موجبة للزيادة، سالبة للخصم</small>
+            </div>
+            <div class="form-group">
+                <label>التقريب إلى</label>
+                <select id="bpRound" class="form-select">
+                    <option value="0.5">0.5</option>
+                    <option value="1" selected>1</option>
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+            <div id="bpPreview" style="margin:12px 0;padding:12px;background:var(--bg-secondary);border-radius:8px;display:none;"></div>
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-success" id="applyBulkPriceBtn" onclick="confirmBulkPrice()" style="flex:1;">تطبيق التحديث</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('bulkPriceModal').style.display='none'" style="flex:1;">إلغاء</button>
+            </div>
         </div>
     </div>
 

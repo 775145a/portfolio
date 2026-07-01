@@ -167,6 +167,14 @@ const LANG = {
         'set.clearData': '\u0645\u0633\u062D \u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A',
         'set.downloadBackup': '\u062A\u062D\u0645\u064A\u0644 \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629',
         'set.importBackup': '\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629',
+        'set.exportAllData': '\u062A\u0635\u062F\u064A\u0631 \u0643\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A',
+        'set.importData': '\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0628\u064A\u0627\u0646\u0627\u062A',
+        'set.importWarning': '\u26A0\uFE0F \u062A\u062D\u0630\u064A\u0631: \u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0633\u064A\u062D\u0644 \u0645\u062D\u0644 \u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062D\u0627\u0644\u064A\u0629!',
+        'set.lastBackup': '\u0622\u062E\u0631 \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629:',
+        'set.noBackup': '\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u0633\u0627\u0628\u0642\u0629',
+        'set.backupExported': '\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0646\u0633\u062E\u0629 \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 - \u0627\u0644\u062D\u062C\u0645:',
+        'set.restoreSuccess': '\u062A\u0645 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0646\u062C\u0627\u062D! \u0633\u064A\u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0641\u062D\u0629...',
+        'set.invalidBackupFile': '\u0645\u0644\u0641 \u0627\u0644\u0646\u0633\u062E\u0629 \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D',
         'set.exportCSV': '\u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0645\u062E\u0632\u0648\u0646 CSV',
         'lang.toggle': 'English',
         'cart.withoutCustomer': '\u0628\u062F\u0648\u0646 \u0639\u0645\u064A\u0644',
@@ -572,6 +580,14 @@ const LANG = {
         'set.clearData': 'Clear All Data',
         'set.downloadBackup': 'Download Backup',
         'set.importBackup': 'Import Backup',
+        'set.exportAllData': 'Export All Data',
+        'set.importData': 'Import Data',
+        'set.importWarning': '\u26A0\uFE0F Warning: Importing will OVERWRITE all existing data!',
+        'set.lastBackup': 'Last backup:',
+        'set.noBackup': 'No previous backup',
+        'set.backupExported': 'Backup exported - size:',
+        'set.restoreSuccess': 'Data restored successfully! Reloading page...',
+        'set.invalidBackupFile': 'Invalid backup file',
         'set.exportCSV': 'Export Inventory CSV',
         'lang.toggle': '\u0639\u0631\u0628\u064A',
         'cart.withoutCustomer': 'No Customer',
@@ -1052,6 +1068,19 @@ function saveData() {
 
 function loadMeds() {
     loadStock();
+    normalizeMedicineFields();
+}
+
+function normalizeMedicineFields() {
+    for (var i = 0; i < medicinesDB.length; i++) {
+        var m = medicinesDB[i];
+        if (m.name === undefined && m.n !== undefined) m.name = m.n;
+        if (m.scientificName === undefined && m.s !== undefined) m.scientificName = m.s;
+        if (m.category === undefined && m.c !== undefined) m.category = m.c;
+        if (m.price === undefined && m.p !== undefined) m.price = m.p;
+        if (m.manufacturer === undefined && m.m !== undefined) m.manufacturer = m.m;
+        if (m.barcode === undefined && m.b !== undefined) m.barcode = m.b;
+    }
 }
 
 var cur = '\u062C.\u0645';
@@ -1389,18 +1418,39 @@ document.getElementById('posCategory').addEventListener('change', function() {
     renderMedsGrid();
 });
 
+var cachedCategories = null;
+
 function loadCategories() {
-    let cats = getCategories();
+    if (!cachedCategories) {
+        cachedCategories = getCategories();
+    }
+    let cats = cachedCategories;
     let selects = ['posCategory', 'invCategory'];
     selects.forEach(function(id) {
         let sel = document.getElementById(id);
         if (!sel) return;
         let html = '<option value="\u0627\u0644\u0643\u0644">' + getText('pos.allCategories') + '</option>';
-        cats.forEach(function(c) {
-            html += '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>';
-        });
+        for (var ci = 0; ci < cats.length; ci++) {
+            html += '<option value="' + escapeHtml(cats[ci]) + '">' + escapeHtml(cats[ci]) + '</option>';
+        }
         sel.innerHTML = html;
     });
+}
+
+var cachedManufacturers = null;
+
+function loadManufacturers() {
+    if (!cachedManufacturers) {
+        cachedManufacturers = getManufacturers();
+    }
+    var mfrs = cachedManufacturers;
+    var sel = document.getElementById('invManufacturer');
+    if (!sel) return;
+    var html = '<option value="\u0627\u0644\u0643\u0644">\u0643\u0644 \u0627\u0644\u0634\u0631\u0643\u0627\u062A</option>';
+    for (var mi = 0; mi < mfrs.length; mi++) {
+        html += '<option value="' + escapeHtml(mfrs[mi]) + '">' + escapeHtml(mfrs[mi]) + '</option>';
+    }
+    sel.innerHTML = html;
 }
 
 // ===== CART =====
@@ -2974,6 +3024,7 @@ function loadSettings() {
             spf.innerHTML += '<option value="' + sup.id + '">' + escapeHtml(sup.name) + '</option>';
         });
     }
+    updateBackupDateDisplay();
 }
 
 function saveSettings() {
@@ -3029,54 +3080,61 @@ function resetData() {
     }
 }
 
-function exportData() {
-    let dataStr = JSON.stringify(appData, null, 2);
-    let blob = new Blob([dataStr], { type: 'application/json' });
-    let url = URL.createObjectURL(blob);
-    let a = document.createElement('a');
+function exportAllData() {
+    var backup = {
+        exportDate: new Date().toISOString(),
+        version: '1.0',
+        appData: JSON.parse(JSON.stringify(appData)),
+        medStock: getAllStock()
+    };
+    var json = JSON.stringify(backup, null, 2);
+    var blob = new Blob([json], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
     a.href = url;
-    a.download = 'pharmacy_backup_' + todayStr() + '.json';
+    a.download = 'valopos-backup-' + todayStr() + '.json';
     a.click();
     URL.revokeObjectURL(url);
-}
-
-function importData() {
-    let input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = function(e) {
-        let file = e.target.files[0];
-        let reader = new FileReader();
-        reader.onload = function(ev) {
-            try {
-                let data = JSON.parse(ev.target.result);
-                appData = { ...appData, ...data };
-                appData.settings = { ...appData.settings, ...data.settings };
-                saveData();
-                renderDashboard();
-                renderInventory();
-                renderReports();
-                renderCustomers();
-                renderSuppliers();
-                renderPurchases();
-                showToast(getText('settings.importSuccess'), 'success');
-            } catch (err) {
-                showToast(getText('settings.importError'), 'error');
-            }
-        };
-        reader.readAsText(file);
-    };
-    input.click();
-}
-
-function downloadBackup() {
+    var sizeKB = (blob.size / 1024).toFixed(1);
     localStorage.setItem('valopos_last_backup', Date.now().toString());
-    exportData();
-    showToast(getText('settings.backupDownloaded'), 'success');
+    updateBackupDateDisplay();
+    showToast(getText('set.backupExported') + ' ' + sizeKB + ' KB', 'success');
 }
 
-function importBackup() {
-    importData();
+function importAllData(file) {
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+        try {
+            var data = JSON.parse(ev.target.result);
+            if (!data || !data.appData || !data.medStock) {
+                showToast(getText('set.invalidBackupFile'), 'error');
+                return;
+            }
+            appData = data.appData;
+            medStock = data.medStock;
+            saveData();
+            saveStock();
+            showToast(getText('set.restoreSuccess'), 'success');
+            setTimeout(function() {
+                location.reload();
+            }, 2000);
+        } catch (err) {
+            showToast(getText('set.importError'), 'error');
+        }
+    };
+    reader.readAsText(file);
+}
+
+function updateBackupDateDisplay() {
+    var el = document.getElementById('lastBackupDate');
+    if (!el) return;
+    var ts = localStorage.getItem('valopos_last_backup');
+    if (ts) {
+        var d = new Date(parseInt(ts));
+        el.textContent = d.toLocaleString();
+    } else {
+        el.textContent = getText('set.noBackup');
+    }
 }
 
 function escapeHtmlCSV(str) {
@@ -3134,7 +3192,7 @@ window.addEventListener('click', function(e) {
     }
 });
 
-document.getElementById('exportBtn').addEventListener('click', exportData);
+document.getElementById('exportBtn').addEventListener('click', exportAllData);
 
 // ===== RIPPLE EFFECT =====
 (function() {
@@ -3161,13 +3219,13 @@ document.getElementById('exportBtn').addEventListener('click', exportData);
     let icons = toggles.map(function(t) { return t ? t.querySelector('i') : null; });
     let saved = localStorage.getItem('valopos_theme');
     if (saved === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'valopos-dark');
+        document.documentElement.setAttribute('data-theme', 'dark');
         icons.forEach(function(ic) { if (ic) ic.className = 'fas fa-sun'; });
     }
     function applyTheme(isDark) {
         let html = document.documentElement;
         if (isDark) {
-            html.setAttribute('data-theme', 'valopos-dark');
+            html.setAttribute('data-theme', 'dark');
             icons.forEach(function(ic) { if (ic) ic.className = 'fas fa-sun'; });
             localStorage.setItem('valopos_theme', 'dark');
         } else {
@@ -3180,7 +3238,7 @@ document.getElementById('exportBtn').addEventListener('click', exportData);
         if (toggle) {
             toggle.addEventListener('click', function() {
                 let html = document.documentElement;
-                let isDark = html.getAttribute('data-theme') === 'valopos-dark';
+                let isDark = html.getAttribute('data-theme') === 'dark';
                 applyTheme(!isDark);
             });
         }
@@ -3959,12 +4017,12 @@ function setupAutocomplete(inputId, sourceData, displayField, onSelect) {
 function toggleTheme() {
     var html = document.documentElement;
     var current = html.getAttribute('data-theme');
-    var isDark = current === 'valopos-dark';
+    var isDark = current === 'dark';
     if (isDark) {
         html.removeAttribute('data-theme');
         localStorage.setItem('valopos_theme', 'light');
     } else {
-        html.setAttribute('data-theme', 'valopos-dark');
+        html.setAttribute('data-theme', 'dark');
         localStorage.setItem('valopos_theme', 'dark');
     }
     updateThemeIcons(!isDark);
