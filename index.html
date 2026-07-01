@@ -19,7 +19,8 @@
     <meta name="twitter:title" content="ValoPOS - نظام كاشير الصيدلية" />
     <meta name="twitter:description" content="نظام كاشير متكامل لإدارة الصيدليات" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <link rel="stylesheet" href="css/style.css?v=20260613">
+    <link rel="stylesheet" href="css/style.css?v=20260701">
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js"></script>
     <style>
       :root {
         --primary: #2563eb;
@@ -340,8 +341,11 @@
                                 <input type="text" id="posSearch" data-i18n="pos.searchPlaceholder" placeholder="ابحث عن دواء بالاسم أو الباركود..." autocomplete="off">
                                 <div class="search-suggestions" id="searchSuggestions"></div>
                             </div>
-                            <select id="posCategory" class="form-select">
+                            <select id="posCategory" class="form-select" style="max-width:140px;">
                                 <option value="الكل" data-i18n="pos.allCategories">كل التصنيفات</option>
+                            </select>
+                            <select id="posManufacturer" class="form-select" style="max-width:160px;">
+                                <option value="الكل">كل الشركات</option>
                             </select>
                         </div>
                         <div class="meds-grid" id="medsGrid"></div>
@@ -994,8 +998,23 @@
                             </div>
                         </div>
                     </div>
+                    <div class="card full-width">
+                        <div class="card-header"><h3>🏭 وكلاء الشركات والمندوبين</h3></div>
+                        <div class="card-body">
+                            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">إدارة مندوبي شركات الأدوية للتواصل السريع</p>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead><tr><th>الشركة</th><th>المندوب</th><th>رقم الهاتف</th><th>البريد الإلكتروني</th><th>آخر تواصل</th><th>الإجراءات</th></tr></thead>
+                                    <tbody id="agentsBody"></tbody>
+                                </table>
+                            </div>
+                            <button class="btn btn-primary" onclick="showAddAgentModal()" style="margin-top:10px;">+ إضافة مندوب</button>
+                            <button class="btn btn-info" onclick="exportAgentsCSV()" style="margin-top:10px;margin-right:8px;">📥 تصدير CSV</button>
+                        </div>
+                    </div>
                 </div>
             </section>
+
         </main>
 
     <!-- ===== صفحة المستودعات ===== -->
@@ -2117,6 +2136,56 @@
             <div class="auth-footer">
                 <span>ValoPOS v1.0</span>
                 <span id="authModeBtn" style="cursor:pointer;color:var(--primary-light);font-size:13px;" data-i18n="auth.switchToChange">تغيير كلمة المرور</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== مودال اختصارات لوحة المفاتيح ===== -->
+    <div class="modal" id="shortcutsModal">
+        <div class="modal-content" style="max-width:500px;">
+            <span class="modal-close">&times;</span>
+            <h2>⌨️ اختصارات لوحة المفاتيح</h2>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px;margin-top:12px;">
+                <div><kbd>F1</kbd> المساعدة والاختصارات</div>
+                <div><kbd>F2</kbd> نقطة البيع</div>
+                <div><kbd>F3</kbd> المخزون</div>
+                <div><kbd>F4</kbd> العملاء</div>
+                <div><kbd>F5</kbd> التقارير</div>
+                <div><kbd>F6</kbd> التركيز على البحث</div>
+                <div><kbd>F7</kbd> إنهاء الفاتورة (الدفع)</div>
+                <div><kbd>F8</kbd> فاتورة جديدة</div>
+                <div><kbd>F9</kbd> تركيز على الدفع</div>
+                <div><kbd>F10</kbd> الإعدادات</div>
+                <div><kbd>Esc</kbd> إغلاق جميع النوافذ</div>
+                <div><kbd>Ctrl+F</kbd> بحث في المخزون</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== مودال إضافة مندوب ===== -->
+    <div class="modal" id="addAgentModal">
+        <div class="modal-content" style="max-width:450px;">
+            <span class="modal-close">&times;</span>
+            <h2>إضافة مندوب شركة</h2>
+            <div class="form-group">
+                <label>الشركة المصنعة</label>
+                <select id="agentCompany" class="form-select"></select>
+            </div>
+            <div class="form-group">
+                <label>اسم المندوب</label>
+                <input type="text" id="agentName" class="form-input" placeholder="اسم المندوب">
+            </div>
+            <div class="form-group">
+                <label>رقم الهاتف</label>
+                <input type="text" id="agentPhone" class="form-input" placeholder="01234567890">
+            </div>
+            <div class="form-group">
+                <label>البريد الإلكتروني</label>
+                <input type="email" id="agentEmail" class="form-input" placeholder="agent@company.com">
+            </div>
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-success" onclick="saveAgent()" style="flex:1;">💾 حفظ</button>
+                <button class="btn btn-secondary" onclick="closeAddAgentModal()" style="flex:1;">إلغاء</button>
             </div>
         </div>
     </div>

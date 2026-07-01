@@ -3015,6 +3015,41 @@ textarea.form-input {
         margin-left: 0;
     }
 }
+
+kbd {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    margin: 2px 0;
+    min-width: 28px;
+    text-align: center;
+    font-weight: 600;
+}
+
+#shortcutsModal .modal-content div[kbd] {
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: var(--bg-alt);
+}
+
+#shortcutsModal kbd {
+    margin-left: 8px;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
 @media (max-width: 768px) {
     [dir="ltr"] .sidebar {
         right: auto;

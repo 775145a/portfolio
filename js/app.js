@@ -1279,7 +1279,9 @@ document.getElementById('globalSearch').addEventListener('input', function() {
 
 function renderMedsGrid(query) {
     let grid = document.getElementById('medsGrid');
+    if (!grid) return;
     let category = document.getElementById('posCategory').value;
+    let manufacturer = document.getElementById('posManufacturer') ? document.getElementById('posManufacturer').value : '\u0627\u0644\u0643\u0644';
     let meds = query ? searchMedicines(query) : null;
     if (!query) {
         let searchVal = document.getElementById('posSearch').value.trim();
@@ -1288,6 +1290,8 @@ function renderMedsGrid(query) {
     if (!meds) {
         if (category !== '\u0627\u0644\u0643\u0644') {
             meds = getMedicinesByCategory(category);
+        } else if (manufacturer !== '\u0627\u0644\u0643\u0644') {
+            meds = getMedicinesByManufacturer(manufacturer);
         }
     }
     if (!meds) {
@@ -1296,6 +1300,9 @@ function renderMedsGrid(query) {
     }
     if (category !== '\u0627\u0644\u0643\u0644' && meds.length > 200) {
         meds = meds.filter(function(m) { return m.category === category || m.c === category; });
+    }
+    if (manufacturer !== '\u0627\u0644\u0643\u0644' && meds.length > 200) {
+        meds = meds.filter(function(m) { return (m.manufacturer === manufacturer || m.m === manufacturer); });
     }
     grid.innerHTML = '';
     if (meds.length === 0) {
@@ -1417,6 +1424,9 @@ document.addEventListener('click', function(e) {
 document.getElementById('posCategory').addEventListener('change', function() {
     renderMedsGrid();
 });
+document.getElementById('posManufacturer').addEventListener('change', function() {
+    renderMedsGrid();
+});
 
 var cachedCategories = null;
 
@@ -1444,13 +1454,16 @@ function loadManufacturers() {
         cachedManufacturers = getManufacturers();
     }
     var mfrs = cachedManufacturers;
-    var sel = document.getElementById('invManufacturer');
-    if (!sel) return;
-    var html = '<option value="\u0627\u0644\u0643\u0644">\u0643\u0644 \u0627\u0644\u0634\u0631\u0643\u0627\u062A</option>';
-    for (var mi = 0; mi < mfrs.length; mi++) {
-        html += '<option value="' + escapeHtml(mfrs[mi]) + '">' + escapeHtml(mfrs[mi]) + '</option>';
+    var selIds = ['invManufacturer', 'posManufacturer'];
+    for (var si = 0; si < selIds.length; si++) {
+        var sel = document.getElementById(selIds[si]);
+        if (!sel) continue;
+        var html = '<option value="\u0627\u0644\u0643\u0644">\u0643\u0644 \u0627\u0644\u0634\u0631\u0643\u0627\u062A</option>';
+        for (var mi = 0; mi < mfrs.length; mi++) {
+            html += '<option value="' + escapeHtml(mfrs[mi]) + '">' + escapeHtml(mfrs[mi]) + '</option>';
+        }
+        sel.innerHTML = html;
     }
-    sel.innerHTML = html;
 }
 
 // ===== CART =====
@@ -1596,6 +1609,11 @@ document.getElementById('quickAddCustomerBtn').addEventListener('click', functio
 });
 
 // ===== CONFIRM SALE =====
+function triggerCheckout() {
+    var btn = document.getElementById('checkoutBtn');
+    if (btn) btn.click();
+}
+
 document.getElementById('checkoutBtn').addEventListener('click', function() {
     if (appData.cart.length === 0) {
         showToast('\u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0641\u0627\u0631\u063A\u0629! \u0623\u0636\u0641 \u0623\u0635\u0646\u0627\u0641\u0627\u064B \u0623\u0648\u0644\u0627\u064B.', 'error');
@@ -3019,11 +3037,15 @@ function loadSettings() {
     // Load supplier filter dropdown
     var spf = document.getElementById('spSupplierFilter');
     if (spf) {
-        spf.innerHTML = '<option value="">الكل</option>';
+        spf.innerHTML = '<option value="">' + getText('common.select') + '</option>';
         (appData.suppliers || []).forEach(function(sup) {
             spf.innerHTML += '<option value="' + sup.id + '">' + escapeHtml(sup.name) + '</option>';
         });
     }
+    updateBackupDateDisplay();
+    loadAgents();
+    loadManufacturers();
+}
     updateBackupDateDisplay();
 }
 
@@ -3959,21 +3981,130 @@ document.getElementById('priceTypeToggle')?.addEventListener('change', function(
 // Update cart to handle wholesale pricing
 var origAddToCart = addToCart;
 
+// ===== NAVIGATION HELPER =====
+function navigateTo(pageId) {
+    var navItem = document.querySelector('[data-page="' + pageId + '"]');
+    if (navItem) navItem.click();
+}
+
 // ===== KEYBOARD SHORTCUTS ENHANCED =====
 document.addEventListener('keydown', function(e) {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+        if (e.key === 'Escape') { closeAllModals(); e.target.blur(); return; }
+        if (e.key === 'F7' && e.target.id === 'posSearch') { e.preventDefault(); triggerCheckout(); return; }
+        return;
+    }
     switch(e.key) {
-        case 'F2': e.preventDefault(); var posPage = document.querySelector('[data-page="pos"]'); if (posPage) posPage.click(); break;
-        case 'F3': e.preventDefault(); var invPage = document.querySelector('[data-page="inventory"]'); if (invPage) invPage.click(); break;
-        case 'F4': e.preventDefault(); var custPage = document.querySelector('[data-page="customers"]'); if (custPage) custPage.click(); break;
-        case 'F5': e.preventDefault(); var repPage = document.querySelector('[data-page="reports"]'); if (repPage) repPage.click(); break;
-        case 'F9': e.preventDefault(); newSale(); break;
+        case 'F1': e.preventDefault(); showShortcutsHelp(); break;
+        case 'F2': e.preventDefault(); navigateTo('pos'); break;
+        case 'F3': e.preventDefault(); navigateTo('inventory'); break;
+        case 'F4': e.preventDefault(); navigateTo('customers'); break;
+        case 'F5': e.preventDefault(); navigateTo('reports'); break;
+        case 'F6': e.preventDefault(); focusPosSearch(); break;
+        case 'F7': e.preventDefault(); var pp = document.querySelector('[data-page="pos"]'); if (pp && pp.classList.contains('active')) { triggerCheckout(); } break;
+        case 'F8': e.preventDefault(); newSale(); break;
+        case 'F9': e.preventDefault(); focusPaidInput(); break;
+        case 'F10': e.preventDefault(); navigateTo('settings'); break;
         case 'Escape': closeAllModals(); break;
     }
 });
 
+function showShortcutsHelp() {
+    var modal = document.getElementById('shortcutsModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function focusPosSearch() {
+    navigateTo('pos');
+    setTimeout(function() {
+        var input = document.getElementById('posSearch');
+        if (input) { input.focus(); input.select(); }
+    }, 300);
+}
+
+function focusPaidInput() {
+    var input = document.getElementById('paidInput');
+    if (input) { input.focus(); input.select(); }
+}
+
 function closeAllModals() {
     document.querySelectorAll('.modal').forEach(function(m) { m.style.display = 'none'; });
+}
+
+// ===== وكلاء الشركات والمندوبين (AGENTS) =====
+function loadAgents() {
+    if (!appData.agents) appData.agents = [];
+    renderAgents();
+}
+
+function renderAgents() {
+    var tbody = document.getElementById('agentsBody');
+    if (!tbody) return;
+    var agents = appData.agents || [];
+    if (agents.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center empty-state">لا يوجد مندوبون بعد</td></tr>';
+        return;
+    }
+    var html = '';
+    for (var i = 0; i < agents.length; i++) {
+        var a = agents[i];
+        var lastContact = a.lastContact ? new Date(a.lastContact).toLocaleDateString() : '-';
+        html += '<tr><td>' + escapeHtml(a.company) + '</td><td>' + escapeHtml(a.name) + '</td><td><a href="tel:' + escapeHtml(a.phone) + '" style="color:var(--primary);">' + escapeHtml(a.phone) + '</a></td><td><a href="mailto:' + escapeHtml(a.email) + '" style="color:var(--primary);">' + escapeHtml(a.email) + '</a></td><td>' + lastContact + '</td><td><button class="btn btn-sm btn-danger" onclick="deleteAgent(' + i + ')">🗑️</button></td></tr>';
+    }
+    tbody.innerHTML = html;
+}
+
+function showAddAgentModal() {
+    var sel = document.getElementById('agentCompany');
+    if (sel) {
+        var mfrs = getManufacturers();
+        sel.innerHTML = '<option value="">اختر الشركة...</option>';
+        for (var i = 0; i < mfrs.length; i++) {
+            sel.innerHTML += '<option value="' + escapeHtml(mfrs[i]) + '">' + escapeHtml(mfrs[i]) + '</option>';
+        }
+    }
+    var modal = document.getElementById('addAgentModal');
+    if (modal) { modal.style.display = 'flex'; document.getElementById('agentName').value = ''; document.getElementById('agentPhone').value = ''; document.getElementById('agentEmail').value = ''; }
+}
+
+function closeAddAgentModal() {
+    document.getElementById('addAgentModal').style.display = 'none';
+}
+
+function saveAgent() {
+    var company = document.getElementById('agentCompany').value;
+    var name = document.getElementById('agentName').value.trim();
+    var phone = document.getElementById('agentPhone').value.trim();
+    var email = document.getElementById('agentEmail').value.trim();
+    if (!company || !name) { showToast('الشركة واسم المندوب مطلوبان', 'error'); return; }
+    if (!appData.agents) appData.agents = [];
+    appData.agents.push({ company: company, name: name, phone: phone, email: email, lastContact: null, createdAt: new Date().toISOString() });
+    saveData();
+    renderAgents();
+    closeAddAgentModal();
+    showToast('تم إضافة المندوب ' + escapeHtml(name), 'success');
+}
+
+function deleteAgent(index) {
+    if (!confirm('هل تريد حذف هذا المندوب؟')) return;
+    appData.agents.splice(index, 1);
+    saveData();
+    renderAgents();
+    showToast('تم حذف المندوب', 'info');
+}
+
+function exportAgentsCSV() {
+    var agents = appData.agents || [];
+    if (agents.length === 0) { showToast('لا يوجد مندوبون للتصدير', 'warning'); return; }
+    var csv = 'الشركة,اسم المندوب,رقم الهاتف,البريد الإلكتروني,آخر تواصل\n';
+    for (var i = 0; i < agents.length; i++) {
+        var a = agents[i];
+        csv += '"' + a.company + '","' + a.name + '","' + (a.phone || '') + '","' + (a.email || '') + '","' + (a.lastContact || '') + '"\n';
+    }
+    var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = 'agents-' + todayStr() + '.csv'; a.click();
+    URL.revokeObjectURL(url);
 }
 
 // ===== SMART SEARCH AUTOCOMPLETE =====
